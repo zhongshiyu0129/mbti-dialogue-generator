@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MBTI 对话图生成器（多页版）</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  padding: 16px;
+}
+.container { max-width: 1500px; margin: 0 auto; }
+h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
+.subtitle { color: rgba(255,255,255,0.8); text-align: center; margin-bottom: 16px; font-size: 13px; }
+.main { display: flex; gap: 16px; align-items: flex-start; }
+
+/* 左侧控制面板 */
+.panel { background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); }
+.control-panel { flex: 0 0 440px; max-height: calc(100vh - 100px); overflow-y: auto; }
+.preview-panel { flex: 1; min-height: 700px; display: flex; flex-direction: column; }
+
+.section { margin-bottom: 18px; }
+.section-title { font-size: 15px; font-weight: 600; color: #333; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.section-title .tag { font-size: 10px; padding: 2px 7px; border-radius: 8px; font-weight: 500; }
+.tag-a { background: #e3f2fd; color: #1976d2; }
+.tag-b { background: #e8f5e9; color: #388e3c; }
+
+/* MBTI 选择器 */
+.mbti-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.mbti-item { border: 2px solid #e0e0e0; border-radius: 8px; padding: 4px; cursor: pointer; transition: all 0.2s; text-align: center; background: #fafafa; }
+.mbti-item:hover { border-color: #9c27b0; background: #f3e5f5; }
+.mbti-item.selected { border-color: #7c4dff; background: #ede7f6; box-shadow: 0 2px 6px rgba(124, 77, 255, 0.3); }
+.mbti-item img { width: 100%; height: 42px; object-fit: contain; }
+.mbti-item .code { font-size: 10px; font-weight: 600; color: #333; }
+
+/* 对话输入 */
+.dialogue-list { display: flex; flex-direction: column; gap: 8px; }
+.dialogue-item { display: flex; gap: 6px; align-items: flex-start; }
+.speaker-btn { flex: 0 0 32px; height: 34px; border-radius: 7px; border: none; cursor: pointer; font-weight: 700; font-size: 12px; transition: all 0.2s; }
+.speaker-a { background: #e3f2fd; color: #1976d2; }
+.speaker-b { background: #e8f5e9; color: #388e3c; }
+.dialogue-text { flex: 1; padding: 8px 10px; border: 1px solid #ddd; border-radius: 7px; font-size: 13px; resize: vertical; min-height: 34px; font-family: inherit; }
+.dialogue-text:focus { outline: none; border-color: #7c4dff; box-shadow: 0 0 0 2px rgba(124, 77, 255, 0.1); }
+.delete-btn { flex: 0 0 28px; height: 34px; border: none; background: #ffebee; color: #e53935; border-radius: 7px; cursor: pointer; font-size: 14px; }
+.delete-btn:hover { background: #ffcdd2; }
+.add-btn { width: 100%; padding: 8px; border: 2px dashed #ccc; background: #fafafa; border-radius: 7px; cursor: pointer; font-size: 13px; color: #666; }
+.add-btn:hover { border-color: #7c4dff; color: #7c4dff; background: #f3e5f5; }
+
+/* 输入框通用 */
+.text-input { width: 100%; padding: 9px 11px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; }
+.text-input:focus { outline: none; border-color: #7c4dff; box-shadow: 0 0 0 2px rgba(124, 77, 255, 0.1); }
+.hint { font-size: 11px; color: #999; margin-top: 5px; line-height: 1.4; }
+
+/* 分页设置 */
+.pagination-setting { display: flex; align-items: center; gap: 10px; }
+.pagination-setting label { font-size: 13px; color: #555; }
+.pagination-setting select { padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+
+/* 生成按钮 */
+.generate-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #7c4dff 0%, #536dfe 100%); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(124, 77, 255, 0.4); }
+.generate-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(124, 77, 255, 0.5); }
+.generate-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-row { display: flex; gap: 8px; }
+.btn-row .generate-btn { flex: 1; padding: 10px; font-size: 13px; }
+.btn-secondary { background: #fff; color: #7c4dff; border: 2px solid #7c4dff; box-shadow: none; }
+.btn-secondary:hover:not(:disabled) { background: #f3e5f5; }
+
+/* 预览区 - 页码导航 */
+.page-nav { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; justify-content: center; }
+.page-tab { padding: 6px 14px; border: 2px solid #ddd; background: #fafafa; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 600; color: #666; transition: all 0.2s; }
+.page-tab:hover { border-color: #7c4dff; color: #7c4dff; }
+.page-tab.active { background: #7c4dff; color: #fff; border-color: #7c4dff; }
+.page-tab.generated { border-color: #4caf50; color: #4caf50; }
+.page-tab.active.generated { background: #4caf50; color: #fff; border-color: #4caf50; }
+
+/* 预览图 */
+.preview-image-wrap { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 400px; }
+#resultImage { max-width: 100%; max-height: 65vh; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,0.2); display: none; }
+.preview-placeholder { text-align: center; color: #999; }
+.preview-placeholder .icon { font-size: 56px; margin-bottom: 12px; opacity: 0.3; }
+.preview-placeholder .text { font-size: 14px; line-height: 1.6; }
+
+/* 加载状态 */
+.loading { text-align: center; color: #666; display: none; }
+.loading .spinner { width: 36px; height: 36px; border: 4px solid #e0e0e0; border-top-color: #7c4dff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading .text { font-size: 13px; line-height: 1.6; }
+.progress-bar { width: 200px; height: 6px; background: #e0e0e0; border-radius: 3px; margin: 12px auto 0; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, #7c4dff, #536dfe); transition: width 0.3s; width: 0%; }
+
+/* 修改区域 */
+.modify-section { margin-top: 14px; padding-top: 14px; border-top: 1px solid #eee; display: none; }
+.modify-section.show { display: block; }
+.modify-input { width: 100%; padding: 9px 11px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 60px; margin-bottom: 8px; }
+.modify-input:focus { outline: none; border-color: #ff9800; box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.1); }
+.modify-btn { width: 100%; padding: 10px; background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.modify-btn:hover:not(:disabled) { transform: translateY(-1px); }
+.modify-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* 下载按钮 */
+.download-row { display: flex; gap: 8px; margin-top: 12px; }
+.download-btn { flex: 1; padding: 9px; background: #4caf50; color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; display: none; transition: all 0.2s; }
+.download-btn:hover { background: #43a047; }
+.download-btn.show { display: block; }
+
+/* 响应式 */
+@media (max-width: 900px) {
+  .main { flex-direction: column; }
+  .control-panel { flex: none; width: 100%; max-height: none; }
+}
+</style>
+<!-- 本地配置文件（可选，不提交到 Git） -->
+<script src="config.js"></script>
+</head>
+<body>
+<div class="container">
+  <!-- API Key 横幅 -->
+  <div id="apiKeyBanner" style="display:none; background: #fff3cd; border: 1px solid #ffc107; border-radius: 10px; padding: 16px; margin-bottom: 16px; text-align: center;">
+    <h3 style="margin: 0 0 10px 0; color: #856404; font-size: 16px;">🔑 请先配置 API Key</h3>
+    <p style="margin: 0 0 12px 0; color: #856404; font-size: 13px;">首次使用需要填入火山方舟 Seedream API Key，保存后浏览器会记住，下次打开自动使用。</p>
+    <div style="display: flex; gap: 8px; max-width: 500px; margin: 0 auto;">
+      <input type="password" id="apiKeyInput" placeholder="ark-xxxxxxxxxxxxxxxx" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;">
+      <button onclick="saveApiKeyFromInput()" style="padding: 10px 20px; background: #ffc107; color: #000; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">保存 Key</button>
+    </div>
+    <p style="margin: 10px 0 0 0; color: #856404; font-size: 11px;">Key 只保存在你的浏览器本地，不会上传。获取：火山引擎控制台 → 火山方舟 → API Key 管理</p>
+  </div>
+  
+  <h1>MBTI 对话图生成器</h1>
+  <p class="subtitle">多页漫画 · 小红书 3:4 封面 · 支持在生成图上修改</p>
+  
+  <div class="main">
+    <!-- 左侧控制面板 -->
+    <div class="panel control-panel">
+      <!-- 人物A -->
+      <div class="section">
+        <div class="section-title">人物 A <span class="tag tag-a">左侧</span></div>
+        <div class="mbti-grid" id="mbtiGridA"></div>
+      </div>
+      
+      <!-- 人物B -->
+      <div class="section">
+        <div class="section-title">人物 B <span class="tag tag-b">右侧</span></div>
+        <div class="mbti-grid" id="mbtiGridB"></div>
+      </div>
+      
+      <!-- 对话内容 -->
+      <div class="section">
+        <div class="section-title">对话内容</div>
+        <div class="dialogue-list" id="dialogueList"></div>
+        <button class="add-btn" onclick="addDialogue()">+ 添加一条对话</button>
+      </div>
+      
+      <!-- 分页设置 -->
+      <div class="section">
+        <div class="section-title">分页设置</div>
+        <div class="pagination-setting">
+          <label>每页对话轮数：</label>
+          <select id="perPageSelect" onchange="updatePagination()">
+            <option value="2">2 轮/页</option>
+            <option value="3" selected>3 轮/页</option>
+            <option value="4">4 轮/页</option>
+          </select>
+        </div>
+        <p class="hint" id="pageInfoHint">共 1 页对话</p>
+      </div>
+      
+      <!-- 全局风格指令 -->
+      <div class="section">
+        <div class="section-title">全局风格指令（可选）</div>
+        <textarea class="text-input" id="styleInput" rows="2" placeholder="不填则 AI 自由发挥。例如：搞笑风格、在咖啡馆、加一只猫..."></textarea>
+        <p class="hint">应用到所有页面。每页也可以单独修改。</p>
+      </div>
+      
+      <!-- 生成按钮 -->
+      <div class="btn-row">
+        <button class="generate-btn" id="generateAllBtn" onclick="generateAll()">生成全部</button>
+        <button class="generate-btn btn-secondary" id="generateCurrentBtn" onclick="generateCurrentPage()">生成当前页</button>
+      </div>
+    </div>
+    
+    <!-- 右侧预览区 -->
+    <div class="panel preview-panel">
+      <!-- 页码导航 -->
+      <div class="page-nav" id="pageNav"></div>
+      
+      <!-- 预览图 -->
+      <div class="preview-image-wrap">
+        <div class="preview-placeholder" id="placeholder">
+          <div class="icon">🎨</div>
+          <div class="text">选择 MBTI 并输入对话后<br>点击「生成全部」或「生成当前页」</div>
+        </div>
+        <div class="loading" id="loading">
+          <div class="spinner"></div>
+          <div class="text" id="loadingText">AI 正在生成中...</div>
+          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+        <img id="resultImage" alt="生成结果">
+      </div>
+      
+      <!-- 修改区域 -->
+      <div class="modify-section" id="modifySection">
+        <div class="section-title" style="margin-bottom:8px;">修改这张图</div>
+        <textarea class="modify-input" id="modifyInput" rows="2" placeholder="输入修改指令，例如：把背景改成咖啡馆，让INTJ笑一下，给ISFP加一杯奶茶"></textarea>
+        <button class="modify-btn" id="modifyBtn" onclick="modifyCurrentPage()">基于这张图修改</button>
+      </div>
+      
+      <!-- 下载按钮 -->
+      <div class="download-row">
+        <button class="download-btn" id="downloadCurrentBtn" onclick="downloadCurrentPage()">下载当前页</button>
+        <button class="download-btn" id="downloadAllBtn" onclick="downloadAllPages()">下载全部</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ 配置 ============
+// API Key 不硬编码在代码里，优先从 localStorage 读取，其次从 config.js 读取
+// 首次使用时会提示输入，输入后保存到浏览器 localStorage
+const API_KEY_STORAGE_KEY = 'mbti_dialogue_api_key';
+const SEEDREAM_MODEL_ID = 'doubao-seedream-4-5-251128';
+const SEEDREAM_API_URL = 'https://ark.cn-beijing.volces.com/api/v3/images/generations';
+const IMAGE_SIZE = '1920x2560'; // 3:4 小红书封面
+
+// ============ API Key 管理 ============
+function getApiKey() {
+  // 优先从 localStorage 读取
+  const saved = localStorage.getItem(API_KEY_STORAGE_KEY);
+  if (saved && saved.trim()) return saved.trim();
+  // 其次从 config.js（window.CONFIG）读取
+  if (window.CONFIG && window.CONFIG.API_KEY && window.CONFIG.API_KEY.trim()) {
+    return window.CONFIG.API_KEY.trim();
+  }
+  return '';
+}
+function saveApiKey(key) {
+  if (key && key.trim()) {
+    localStorage.setItem(API_KEY_STORAGE_KEY, key.trim());
+  } else {
+    localStorage.removeItem(API_KEY_STORAGE_KEY);
+  }
+}
+function showApiKeyBanner() {
+  const banner = document.getElementById('apiKeyBanner');
+  if (!getApiKey()) {
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+function saveApiKeyFromInput() {
+  const input = document.getElementById('apiKeyInput');
+  const key = input.value.trim();
+  if (!key) { alert('请输入 API Key'); return; }
+  saveApiKey(key);
+  showApiKeyBanner();
+  alert('API Key 已保存，现在可以生成图片了！');
+}
+
+// ============ MBTI 数据 ============
+const MBTI_TYPES = [
+  { code: 'intj', name: 'INTJ 建筑师', group: 'NT', desc: '紫老头，冷静理性，托腮思考' },
+  { code: 'intp', name: 'INTP 逻辑学家', group: 'NT', desc: '药水姐，白大褂，拿着试管' },
+  { code: 'entj', name: 'ENTJ 指挥官', group: 'NT', desc: '大姐头，拿着教鞭，气场强大' },
+  { code: 'entp', name: 'ENTP 辩论家', group: 'NT', desc: '骨折眉，手势夸张，正在演讲' },
+  { code: 'infj', name: 'INFJ 提倡者', group: 'NF', desc: '绿老头，拿着法杖，温和深邃' },
+  { code: 'infp', name: 'INFP 调停者', group: 'NF', desc: '小蝴蝶，拿着风车，忧郁文艺' },
+  { code: 'enfj', name: 'ENFJ 主人公', group: 'NF', desc: '宝剑哥，拿着宝剑，热情洋溢' },
+  { code: 'enfp', name: 'ENFP 竞选者', group: 'NF', desc: '快乐小狗，背着背包，活泼开朗' },
+  { code: 'istj', name: 'ISTJ 物流师', group: 'SJ', desc: '蓝老头，戴着眼镜，拿着笔' },
+  { code: 'isfj', name: 'ISFJ 守卫者', group: 'SJ', desc: '小护士，温柔体贴' },
+  { code: 'estj', name: 'ESTJ 总经理', group: 'SJ', desc: '尺子姐，拿着尺子，严格认真' },
+  { code: 'esfj', name: 'ESFJ 执政官', group: 'SJ', desc: '伞哥，穿着围裙，拿着蛋糕' },
+  { code: 'istp', name: 'ISTP 鉴赏家', group: 'SP', desc: '电钻哥，拿着电钻和扳手' },
+  { code: 'isfp', name: 'ISFP 探险家', group: 'SP', desc: '小画家，拿着调色板，安静文艺' },
+  { code: 'estp', name: 'ESTP 企业家', group: 'SP', desc: '墨镜哥，戴着墨镜，背着SPORT包' },
+  { code: 'esfp', name: 'ESFP 表演者', group: 'SP', desc: '沙锤姐，拿着沙锤，正在跳舞' },
+];
+
+// ============ 状态 ============
+let selectedA = 'intj';
+let selectedB = 'enfp';
+let dialogues = [
+  { speaker: 'a', text: '我已经把下周的计划全部安排好了。' },
+  { speaker: 'b', text: '哇！不过我们要不要先去吃个火锅再说？' },
+  { speaker: 'a', text: '……不在计划内。' },
+  { speaker: 'b', text: '那计划外的快乐呢？' },
+  { speaker: 'a', text: '……你赢了。' },
+];
+let pages = []; // 每页：{ dialogues, imageUrl, generated }
+let currentPageIndex = 0;
+
+// ============ 初始化 MBTI 选择器 ============
+function initMbtiGrid(containerId, selected, onSelect) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  MBTI_TYPES.forEach(type => {
+    const item = document.createElement('div');
+    item.className = 'mbti-item' + (type.code === selected ? ' selected' : '');
+    item.innerHTML = `<img src="assets/${type.code}.png" alt="${type.code}" onerror="this.style.display='none'"><div class="code">${type.code.toUpperCase()}</div>`;
+    item.onclick = () => onSelect(type.code);
+    container.appendChild(item);
+  });
+}
+function selectA(code) { selectedA = code; initMbtiGrid('mbtiGridA', selectedA, selectA); }
+function selectB(code) { selectedB = code; initMbtiGrid('mbtiGridB', selectedB, selectB); }
+
+// ============ 对话管理 ============
+function renderDialogues() {
+  const list = document.getElementById('dialogueList');
+  list.innerHTML = '';
+  dialogues.forEach((d, i) => {
+    const item = document.createElement('div');
+    item.className = 'dialogue-item';
+    item.innerHTML = `
+      <button class="speaker-btn ${d.speaker === 'a' ? 'speaker-a' : 'speaker-b'}" onclick="toggleSpeaker(${i})">${d.speaker.toUpperCase()}</button>
+      <textarea class="dialogue-text" rows="1" oninput="updateDialogue(${i}, this.value)">${d.text}</textarea>
+      <button class="delete-btn" onclick="deleteDialogue(${i})">×</button>
+    `;
+    list.appendChild(item);
+  });
+}
+function toggleSpeaker(i) { dialogues[i].speaker = dialogues[i].speaker === 'a' ? 'b' : 'a'; renderDialogues(); updatePagination(); }
+function updateDialogue(i, text) { dialogues[i].text = text; }
+function deleteDialogue(i) { if (dialogues.length <= 1) return; dialogues.splice(i, 1); renderDialogues(); updatePagination(); }
+function addDialogue() {
+  const lastSpeaker = dialogues[dialogues.length - 1].speaker;
+  dialogues.push({ speaker: lastSpeaker === 'a' ? 'b' : 'a', text: '' });
+  renderDialogues(); updatePagination();
+}
+
+// ============ 分页逻辑 ============
+function updatePagination() {
+  const perPage = parseInt(document.getElementById('perPageSelect').value);
+  pages = [];
+  for (let i = 0; i < dialogues.length; i += perPage) {
+    pages.push({ dialogues: dialogues.slice(i, i + perPage), imageUrl: null, generated: false });
+  }
+  if (currentPageIndex >= pages.length) currentPageIndex = pages.length - 1;
+  if (currentPageIndex < 0) currentPageIndex = 0;
+  document.getElementById('pageInfoHint').textContent = `共 ${pages.length} 页对话`;
+  renderPageNav();
+  showPage(currentPageIndex);
+}
+
+function renderPageNav() {
+  const nav = document.getElementById('pageNav');
+  nav.innerHTML = '';
+  pages.forEach((page, i) => {
+    const tab = document.createElement('div');
+    tab.className = 'page-tab' + (i === currentPageIndex ? ' active' : '') + (page.generated ? ' generated' : '');
+    tab.textContent = `第 ${i + 1} 页`;
+    tab.onclick = () => { currentPageIndex = i; renderPageNav(); showPage(i); };
+    nav.appendChild(tab);
+  });
+}
+
+function showPage(index) {
+  const img = document.getElementById('resultImage');
+  const placeholder = document.getElementById('placeholder');
+  const loading = document.getElementById('loading');
+  const modifySection = document.getElementById('modifySection');
+  const downloadBtns = document.querySelectorAll('.download-btn');
+  
+  if (pages[index] && pages[index].imageUrl) {
+    img.src = pages[index].imageUrl;
+    img.style.display = 'block';
+    placeholder.style.display = 'none';
+    loading.style.display = 'none';
+    modifySection.classList.add('show');
+    downloadBtns.forEach(b => b.classList.add('show'));
+  } else {
+    img.style.display = 'none';
+    placeholder.style.display = 'block';
+    loading.style.display = 'none';
+    modifySection.classList.remove('show');
+    downloadBtns.forEach(b => b.classList.remove('show'));
+  }
+}
+
+// ============ 加载图片 ============
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+// ============ 拼接参考图（3:4 竖版）============
+async function createReferenceImage() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1920;
+  canvas.height = 2560;
+  const ctx = canvas.getContext('2d');
+  
+  // 白色背景
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, 1920, 2560);
+  
+  // 加载两个角色
+  const [imgA, imgB] = await Promise.all([
+    loadImage(`assets/${selectedA}.png`),
+    loadImage(`assets/${selectedB}.png`),
+  ]);
+  
+  // 上方左右排列两个角色
+  const size = 800;
+  const y = 200;
+  ctx.drawImage(imgA, 120, y, size, size);
+  
+  // 右侧水平翻转
+  ctx.save();
+  ctx.translate(1920 - 120 - size, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(imgB, 0, y, size, size);
+  ctx.restore();
+  
+  // 下方画对话区域提示（浅色矩形）
+  ctx.fillStyle = 'rgba(200, 200, 255, 0.08)';
+  ctx.fillRect(150, 1200, 1620, 1200);
+  
+  return canvas.toDataURL('image/png');
+}
+
+// ============ 生成提示词（单页）============
+function generatePromptForPage(pageDialogues, pageIndex, totalPages) {
+  const typeA = MBTI_TYPES.find(t => t.code === selectedA);
+  const typeB = MBTI_TYPES.find(t => t.code === selectedB);
+  const globalStyle = document.getElementById('styleInput').value.trim();
+  
+  const dialogueText = pageDialogues.map(d => {
+    const name = d.speaker === 'a' ? typeA.name.split(' ')[0] : typeB.name.split(' ')[0];
+    return `${name}: ${d.text}`;
+  }).join('\n');
+  
+  // 情绪判断
+  const allText = pageDialogues.map(d => d.text).join('');
+  let mood = '自然对话';
+  if (/哈哈|开心|好呀|太棒|喜欢|哇|嘻嘻|好棒|太好了|走啦|吃|玩|耶|棒|爽|快乐|高兴|兴奋|赞|厉害|可爱|漂亮|帅|美|冲|加油|比心/.test(allText)) mood = '开心活泼';
+  else if (/为什么|怎么|？|思考|想想|考虑|计划|安排|分析|逻辑|原因/.test(allText)) mood = '认真思考';
+  else if (/生气|烦|讨厌|滚|闭嘴|无语|无奈|唉|哎|算了|随便/.test(allText)) mood = '无奈吐槽';
+  else if (/喜欢|爱你|想你|抱抱|亲亲|宝贝|亲爱的/.test(allText)) mood = '甜蜜温馨';
+  
+  let userInstructionPart = '';
+  if (globalStyle) {
+    userInstructionPart = `【最高优先级 - 必须严格遵循以下用户指令】
+${globalStyle}
+
+以上用户指令必须全部体现在画面中。
+
+`;
+  }
+  
+  return `${userInstructionPart}一张 MBTI 人格对话漫画图，16personalities 经典低多边形小人风格，3:4 竖版构图。
+
+这是第 ${pageIndex + 1}/${totalPages} 页。
+
+左侧是 ${typeA.name}（${typeA.desc}），右侧是 ${typeB.name}（${typeB.desc}），两人面对面。
+
+整体情绪：${mood}。
+
+本页对话内容：
+${dialogueText}
+
+具体要求：
+1. 保持两个角色的基本颜色、发型和低多边形风格，但可以根据对话内容自由调整表情、手势、身体姿态、配件和周围元素
+2. 角色的表情和动作必须符合对话内容和情绪，不要保持参考图中的固定姿势
+3. 在画面中下部添加对话气泡，气泡里写清楚本页的对话文字
+4. 背景简洁，符合场景氛围，可以根据对话内容添加相关的场景元素
+5. 画面完整，角色和对话气泡都清晰可见，上下左右不要留白过多
+
+注意：不要机械地复制参考图中的角色姿势和表情，要根据对话内容生动地重新演绎。`;
+}
+
+// ============ 调用 Seedream 图生图 API ============
+async function callSeedreamImageEdit(referenceImage, prompt) {
+  const response = await fetch(SEEDREAM_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getApiKey()}` },
+    body: JSON.stringify({ model: SEEDREAM_MODEL_ID, prompt: prompt, image: referenceImage, size: IMAGE_SIZE, response_format: 'url' }),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`API 错误 (${response.status}): ${text.substring(0, 300)}`);
+  }
+  const data = await response.json();
+  const imageUrl = data.data && data.data[0] && data.data[0].url;
+  if (!imageUrl) throw new Error('API 返回数据格式异常: ' + JSON.stringify(data).substring(0, 300));
+  return imageUrl;
+}
+
+// ============ 生成单页 ============
+async function generatePage(pageIndex) {
+  const page = pages[pageIndex];
+  if (!page) return;
+  
+  const referenceImage = await createReferenceImage();
+  const prompt = generatePromptForPage(page.dialogues, pageIndex, pages.length);
+  console.log(`第 ${pageIndex + 1} 页提示词:`, prompt);
+  
+  const imageUrl = await callSeedreamImageEdit(referenceImage, prompt);
+  page.imageUrl = imageUrl;
+  page.generated = true;
+}
+
+// ============ 生成当前页 ============
+async function generateCurrentPage() {
+  if (!getApiKey()) { alert('请先在页面顶部配置 API Key'); showApiKeyBanner(); return; }
+  if (dialogues.every(d => !d.text.trim())) { alert('请输入对话内容'); return; }
+  updatePagination();
+  
+  const btn = document.getElementById('generateCurrentBtn');
+  const loading = document.getElementById('loading');
+  const loadingText = document.getElementById('loadingText');
+  const placeholder = document.getElementById('placeholder');
+  const img = document.getElementById('resultImage');
+  
+  btn.disabled = true;
+  placeholder.style.display = 'none';
+  img.style.display = 'none';
+  loading.style.display = 'block';
+  loadingText.textContent = `正在生成第 ${currentPageIndex + 1}/${pages.length} 页...`;
+  
+  try {
+    await generatePage(currentPageIndex);
+    renderPageNav();
+    showPage(currentPageIndex);
+  } catch (error) {
+    console.error('生成失败:', error);
+    loading.style.display = 'none';
+    placeholder.style.display = 'block';
+    placeholder.querySelector('.text').innerHTML = `生成失败：${error.message}<br><br>请重试`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ============ 生成全部 ============
+async function generateAll() {
+  if (!getApiKey()) { alert('请先在页面顶部配置 API Key'); showApiKeyBanner(); return; }
+  if (dialogues.every(d => !d.text.trim())) { alert('请输入对话内容'); return; }
+  updatePagination();
+  
+  const btn = document.getElementById('generateAllBtn');
+  const btn2 = document.getElementById('generateCurrentBtn');
+  const loading = document.getElementById('loading');
+  const loadingText = document.getElementById('loadingText');
+  const progressFill = document.getElementById('progressFill');
+  const placeholder = document.getElementById('placeholder');
+  const img = document.getElementById('resultImage');
+  
+  btn.disabled = true;
+  btn2.disabled = true;
+  placeholder.style.display = 'none';
+  img.style.display = 'none';
+  loading.style.display = 'block';
+  
+  for (let i = 0; i < pages.length; i++) {
+    currentPageIndex = i;
+    renderPageNav();
+    const progress = ((i) / pages.length) * 100;
+    progressFill.style.width = progress + '%';
+    loadingText.textContent = `正在生成第 ${i + 1}/${pages.length} 页...`;
+    
+    try {
+      await generatePage(i);
+    } catch (error) {
+      console.error(`第 ${i + 1} 页生成失败:`, error);
+      alert(`第 ${i + 1} 页生成失败：${error.message}`);
+      break;
+    }
+  }
+  
+  progressFill.style.width = '100%';
+  loadingText.textContent = '全部生成完成！';
+  setTimeout(() => { loading.style.display = 'none'; }, 1000);
+  
+  currentPageIndex = 0;
+  renderPageNav();
+  showPage(0);
+  btn.disabled = false;
+  btn2.disabled = false;
+}
+
+// ============ 修改当前页 ============
+async function modifyCurrentPage() {
+  const modifyInstruction = document.getElementById('modifyInput').value.trim();
+  if (!modifyInstruction) { alert('请输入修改指令'); return; }
+  
+  const page = pages[currentPageIndex];
+  if (!page || !page.imageUrl) { alert('当前页还没有生成图片'); return; }
+  
+  const btn = document.getElementById('modifyBtn');
+  const loading = document.getElementById('loading');
+  const loadingText = document.getElementById('loadingText');
+  const img = document.getElementById('resultImage');
+  
+  btn.disabled = true;
+  img.style.display = 'none';
+  loading.style.display = 'block';
+  loadingText.textContent = '正在基于当前图修改...';
+  
+  try {
+    // 用当前图片URL作为参考图（API支持URL格式）
+    const typeA = MBTI_TYPES.find(t => t.code === selectedA);
+    const typeB = MBTI_TYPES.find(t => t.code === selectedB);
+    const prompt = `基于这张 MBTI 对话漫画图进行修改。
+
+修改要求：${modifyInstruction}
+
+保持要求：
+1. 保持 ${typeA.name} 和 ${typeB.name} 两个角色的基本形象、颜色和低多边形风格不变
+2. 保持原有的对话气泡和对话文字不变
+3. 只修改用户指定的部分，不要改变其他元素
+4. 保持 3:4 竖版构图和画面完整性`;
+    
+    const newImageUrl = await callSeedreamImageEdit(page.imageUrl, prompt);
+    page.imageUrl = newImageUrl;
+    showPage(currentPageIndex);
+    document.getElementById('modifyInput').value = '';
+  } catch (error) {
+    console.error('修改失败:', error);
+    loading.style.display = 'none';
+    showPage(currentPageIndex);
+    alert(`修改失败：${error.message}`);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ============ 下载 ============
+function downloadCurrentPage() {
+  const page = pages[currentPageIndex];
+  if (!page || !page.imageUrl) return;
+  const link = document.createElement('a');
+  link.href = page.imageUrl;
+  link.download = `MBTI对话图_第${currentPageIndex + 1}页.png`;
+  link.target = '_blank';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function downloadAllPages() {
+  pages.forEach((page, i) => {
+    if (page.imageUrl) {
+      setTimeout(() => {
+        const link = document.createElement('a');
+        link.href = page.imageUrl;
+        link.download = `MBTI对话图_第${i + 1}页.png`;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }, i * 500);
+    }
+  });
+}
+
+// ============ 初始化 ============
+initMbtiGrid('mbtiGridA', selectedA, selectA);
+initMbtiGrid('mbtiGridB', selectedB, selectB);
+renderDialogues();
+updatePagination();
+showApiKeyBanner();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# 敏感文件
+.api_key
+*.key
+.env
+config.js
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 备份文件（可选，不推送旧版本）
+index_old_backup.html
+index_v1_single.html
+
+# 日志
+*.log
