@@ -14,3 +14,8 @@ index_v1_single.html
 
 # 日志
 *.log
+
+# 备份文件
+index_v*.html
+index_old_backup.html
+index_v1_single.html

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MBTI 对话图生成器（多页版）</title>
+<title>MBTI 对话图生成器</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -17,9 +17,8 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
 .subtitle { color: rgba(255,255,255,0.8); text-align: center; margin-bottom: 16px; font-size: 13px; }
 .main { display: flex; gap: 16px; align-items: flex-start; }
 
-/* 左侧控制面板 */
 .panel { background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); }
-.control-panel { flex: 0 0 440px; max-height: calc(100vh - 100px); overflow-y: auto; }
+.control-panel { flex: 0 0 460px; max-height: calc(100vh - 100px); overflow-y: auto; }
 .preview-panel { flex: 1; min-height: 700px; display: flex; flex-direction: column; }
 
 .section { margin-bottom: 18px; }
@@ -59,6 +58,14 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
 .pagination-setting label { font-size: 13px; color: #555; }
 .pagination-setting select { padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
 
+/* 风格指令字段 */
+.style-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.style-field { display: flex; flex-direction: column; gap: 4px; }
+.style-field.full { grid-column: 1 / -1; }
+.style-field label { font-size: 12px; color: #666; font-weight: 500; }
+.style-field input { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; font-family: inherit; }
+.style-field input:focus { outline: none; border-color: #7c4dff; box-shadow: 0 0 0 2px rgba(124, 77, 255, 0.1); }
+
 /* 生成按钮 */
 .generate-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #7c4dff 0%, #536dfe 100%); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(124, 77, 255, 0.4); }
 .generate-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(124, 77, 255, 0.5); }
@@ -67,6 +74,9 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
 .btn-row .generate-btn { flex: 1; padding: 10px; font-size: 13px; }
 .btn-secondary { background: #fff; color: #7c4dff; border: 2px solid #7c4dff; box-shadow: none; }
 .btn-secondary:hover:not(:disabled) { background: #f3e5f5; }
+.stop-btn { width: 100%; margin-top: 8px; padding: 10px; background: #f44336; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: none; transition: all 0.2s; }
+.stop-btn:hover { background: #e53935; transform: translateY(-1px); }
+.stop-btn.show { display: block; }
 
 /* 预览区 - 页码导航 */
 .page-nav { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; justify-content: center; }
@@ -76,9 +86,9 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
 .page-tab.generated { border-color: #4caf50; color: #4caf50; }
 .page-tab.active.generated { background: #4caf50; color: #fff; border-color: #4caf50; }
 
-/* 预览图 */
-.preview-image-wrap { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 400px; }
-#resultImage { max-width: 100%; max-height: 65vh; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,0.2); display: none; }
+/* Canvas 预览 */
+.preview-canvas-wrap { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 400px; }
+#previewCanvas { max-width: 100%; max-height: 65vh; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,0.2); display: none; }
 .preview-placeholder { text-align: center; color: #999; }
 .preview-placeholder .icon { font-size: 56px; margin-bottom: 12px; opacity: 0.3; }
 .preview-placeholder .text { font-size: 14px; line-height: 1.6; }
@@ -110,6 +120,7 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
 @media (max-width: 900px) {
   .main { flex-direction: column; }
   .control-panel { flex: none; width: 100%; max-height: none; }
+  .style-grid { grid-template-columns: 1fr; }
 }
 </style>
 <!-- 本地配置文件（可选，不提交到 Git） -->
@@ -129,7 +140,7 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
   </div>
   
   <h1>MBTI 对话图生成器</h1>
-  <p class="subtitle">多页漫画 · 小红书 3:4 封面 · 支持在生成图上修改</p>
+  <p class="subtitle">AI 生成角色场景 · 脚本合成对话气泡 · 多页背景一致 · 文字实时编辑</p>
   
   <div class="main">
     <!-- 左侧控制面板 -->
@@ -148,7 +159,7 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
       
       <!-- 对话内容 -->
       <div class="section">
-        <div class="section-title">对话内容</div>
+        <div class="section-title">对话内容 <span style="font-size:11px;color:#999;font-weight:normal;">（编辑后右侧气泡实时更新）</span></div>
         <div class="dialogue-list" id="dialogueList"></div>
         <button class="add-btn" onclick="addDialogue()">+ 添加一条对话</button>
       </div>
@@ -167,11 +178,31 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
         <p class="hint" id="pageInfoHint">共 1 页对话</p>
       </div>
       
-      <!-- 全局风格指令 -->
+      <!-- 风格指令（引导式） -->
       <div class="section">
-        <div class="section-title">全局风格指令（可选）</div>
-        <textarea class="text-input" id="styleInput" rows="2" placeholder="不填则 AI 自由发挥。例如：搞笑风格、在咖啡馆、加一只猫..."></textarea>
-        <p class="hint">应用到所有页面。每页也可以单独修改。</p>
+        <div class="section-title">画面设定 <span style="font-size:11px;color:#999;font-weight:normal;">（不填则 AI 自由发挥）</span></div>
+        <div class="style-grid">
+          <div class="style-field full">
+            <label>🎨 整体风格</label>
+            <input type="text" id="styleOverall" placeholder="搞笑 / 温馨 / 赛博朋克 / 复古 / 治愈系...">
+          </div>
+          <div class="style-field full">
+            <label>🏠 场景背景</label>
+            <input type="text" id="styleScene" placeholder="咖啡馆 / 办公室 / 户外公园 / 家里客厅 / 火锅店...">
+          </div>
+          <div class="style-field">
+            <label>😀 A 的表情动作</label>
+            <input type="text" id="styleActionA" placeholder="托腮思考 / 微笑 / 生气 / 扶额...">
+          </div>
+          <div class="style-field">
+            <label>😀 B 的表情动作</label>
+            <input type="text" id="styleActionB" placeholder="星星眼 / 委屈 / 兴奋 / 抱臂...">
+          </div>
+          <div class="style-field full">
+            <label>✨ 额外元素</label>
+            <input type="text" id="styleExtra" placeholder="加一只猫 / 桌上有咖啡 / 窗外下雨 / 旁边有火锅...">
+          </div>
+        </div>
       </div>
       
       <!-- 生成按钮 -->
@@ -179,6 +210,7 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
         <button class="generate-btn" id="generateAllBtn" onclick="generateAll()">生成全部</button>
         <button class="generate-btn btn-secondary" id="generateCurrentBtn" onclick="generateCurrentPage()">生成当前页</button>
       </div>
+      <button class="stop-btn" id="stopBtn" onclick="stopGeneration()">⏹ 停止生成</button>
     </div>
     
     <!-- 右侧预览区 -->
@@ -186,8 +218,8 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
       <!-- 页码导航 -->
       <div class="page-nav" id="pageNav"></div>
       
-      <!-- 预览图 -->
-      <div class="preview-image-wrap">
+      <!-- Canvas 预览 -->
+      <div class="preview-canvas-wrap">
         <div class="preview-placeholder" id="placeholder">
           <div class="icon">🎨</div>
           <div class="text">选择 MBTI 并输入对话后<br>点击「生成全部」或「生成当前页」</div>
@@ -197,12 +229,12 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
           <div class="text" id="loadingText">AI 正在生成中...</div>
           <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
         </div>
-        <img id="resultImage" alt="生成结果">
+        <canvas id="previewCanvas" width="1920" height="2560"></canvas>
       </div>
       
       <!-- 修改区域 -->
       <div class="modify-section" id="modifySection">
-        <div class="section-title" style="margin-bottom:8px;">修改这张图</div>
+        <div class="section-title" style="margin-bottom:8px;">修改这张图（只改角色和背景，气泡不变）</div>
         <textarea class="modify-input" id="modifyInput" rows="2" placeholder="输入修改指令，例如：把背景改成咖啡馆，让INTJ笑一下，给ISFP加一杯奶茶"></textarea>
         <button class="modify-btn" id="modifyBtn" onclick="modifyCurrentPage()">基于这张图修改</button>
       </div>
@@ -218,38 +250,27 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
 
 <script>
 // ============ 配置 ============
-// API Key 不硬编码在代码里，优先从 localStorage 读取，其次从 config.js 读取
-// 首次使用时会提示输入，输入后保存到浏览器 localStorage
 const API_KEY_STORAGE_KEY = 'mbti_dialogue_api_key';
 const SEEDREAM_MODEL_ID = 'doubao-seedream-4-5-251128';
 const SEEDREAM_API_URL = 'https://ark.cn-beijing.volces.com/api/v3/images/generations';
-const IMAGE_SIZE = '1920x2560'; // 3:4 小红书封面
+const CANVAS_W = 1920;
+const CANVAS_H = 2560;
 
 // ============ API Key 管理 ============
 function getApiKey() {
-  // 优先从 localStorage 读取
   const saved = localStorage.getItem(API_KEY_STORAGE_KEY);
   if (saved && saved.trim()) return saved.trim();
-  // 其次从 config.js（window.CONFIG）读取
-  if (window.CONFIG && window.CONFIG.API_KEY && window.CONFIG.API_KEY.trim()) {
-    return window.CONFIG.API_KEY.trim();
-  }
+  if (window.CONFIG && window.CONFIG.API_KEY && window.CONFIG.API_KEY.trim()) return window.CONFIG.API_KEY.trim();
   return '';
 }
 function saveApiKey(key) {
-  if (key && key.trim()) {
-    localStorage.setItem(API_KEY_STORAGE_KEY, key.trim());
-  } else {
-    localStorage.removeItem(API_KEY_STORAGE_KEY);
-  }
+  if (key && key.trim()) localStorage.setItem(API_KEY_STORAGE_KEY, key.trim());
+  else localStorage.removeItem(API_KEY_STORAGE_KEY);
 }
 function showApiKeyBanner() {
   const banner = document.getElementById('apiKeyBanner');
-  if (!getApiKey()) {
-    banner.style.display = 'block';
-  } else {
-    banner.style.display = 'none';
-  }
+  if (!getApiKey()) banner.style.display = 'block';
+  else banner.style.display = 'none';
 }
 function saveApiKeyFromInput() {
   const input = document.getElementById('apiKeyInput');
@@ -290,8 +311,10 @@ let dialogues = [
   { speaker: 'b', text: '那计划外的快乐呢？' },
   { speaker: 'a', text: '……你赢了。' },
 ];
-let pages = []; // 每页：{ dialogues, imageUrl, generated }
+let pages = []; // 每页：{ dialogues, characterImageUrl, generated }
 let currentPageIndex = 0;
+let characterImages = {}; // 缓存加载的角色图片
+let shouldStop = false; // 停止生成标志
 
 // ============ 初始化 MBTI 选择器 ============
 function initMbtiGrid(containerId, selected, onSelect) {
@@ -324,7 +347,13 @@ function renderDialogues() {
   });
 }
 function toggleSpeaker(i) { dialogues[i].speaker = dialogues[i].speaker === 'a' ? 'b' : 'a'; renderDialogues(); updatePagination(); }
-function updateDialogue(i, text) { dialogues[i].text = text; }
+function updateDialogue(i, text) {
+  dialogues[i].text = text;
+  // 实时更新当前页的 Canvas（如果已生成）
+  if (pages[currentPageIndex] && pages[currentPageIndex].characterImageUrl) {
+    renderCanvas(currentPageIndex);
+  }
+}
 function deleteDialogue(i) { if (dialogues.length <= 1) return; dialogues.splice(i, 1); renderDialogues(); updatePagination(); }
 function addDialogue() {
   const lastSpeaker = dialogues[dialogues.length - 1].speaker;
@@ -337,7 +366,7 @@ function updatePagination() {
   const perPage = parseInt(document.getElementById('perPageSelect').value);
   pages = [];
   for (let i = 0; i < dialogues.length; i += perPage) {
-    pages.push({ dialogues: dialogues.slice(i, i + perPage), imageUrl: null, generated: false });
+    pages.push({ dialogues: dialogues.slice(i, i + perPage), characterImageUrl: null, generated: false });
   }
   if (currentPageIndex >= pages.length) currentPageIndex = pages.length - 1;
   if (currentPageIndex < 0) currentPageIndex = 0;
@@ -359,21 +388,21 @@ function renderPageNav() {
 }
 
 function showPage(index) {
-  const img = document.getElementById('resultImage');
+  const canvas = document.getElementById('previewCanvas');
   const placeholder = document.getElementById('placeholder');
   const loading = document.getElementById('loading');
   const modifySection = document.getElementById('modifySection');
   const downloadBtns = document.querySelectorAll('.download-btn');
   
-  if (pages[index] && pages[index].imageUrl) {
-    img.src = pages[index].imageUrl;
-    img.style.display = 'block';
+  if (pages[index] && pages[index].characterImageUrl) {
+    renderCanvas(index);
+    canvas.style.display = 'block';
     placeholder.style.display = 'none';
     loading.style.display = 'none';
     modifySection.classList.add('show');
     downloadBtns.forEach(b => b.classList.add('show'));
   } else {
-    img.style.display = 'none';
+    canvas.style.display = 'none';
     placeholder.style.display = 'block';
     loading.style.display = 'none';
     modifySection.classList.remove('show');
@@ -382,56 +411,85 @@ function showPage(index) {
 }
 
 // ============ 加载图片 ============
-function loadImage(src) {
+async function loadImage(src) {
+  if (characterImages[src]) return characterImages[src];
+  
+  // 远程图片用 fetch + blob 方式加载，绕过 CORS 限制
+  if (src.startsWith('http://') || src.startsWith('https://')) {
+    try {
+      const response = await fetch(src);
+      if (!response.ok) throw new Error(`图片下载失败 (HTTP ${response.status})`);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const img = await new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error('图片解码失败'));
+        image.src = objectUrl;
+      });
+      characterImages[src] = img;
+      return img;
+    } catch (error) {
+      throw new Error(`远程图片加载失败: ${error.message}`);
+    }
+  }
+  
+  // 本地图片用普通方式加载
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
+    img.onload = () => { characterImages[src] = img; resolve(img); };
+    img.onerror = () => reject(new Error(`本地图片加载失败: ${src}`));
     img.src = src;
   });
 }
 
-// ============ 拼接参考图（3:4 竖版）============
+// ============ 拼接参考图 ============
 async function createReferenceImage() {
   const canvas = document.createElement('canvas');
-  canvas.width = 1920;
-  canvas.height = 2560;
+  canvas.width = CANVAS_W;
+  canvas.height = CANVAS_H;
   const ctx = canvas.getContext('2d');
   
-  // 白色背景
   ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, 1920, 2560);
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
   
-  // 加载两个角色
   const [imgA, imgB] = await Promise.all([
     loadImage(`assets/${selectedA}.png`),
     loadImage(`assets/${selectedB}.png`),
   ]);
   
-  // 上方左右排列两个角色
   const size = 800;
   const y = 200;
   ctx.drawImage(imgA, 120, y, size, size);
   
-  // 右侧水平翻转
   ctx.save();
-  ctx.translate(1920 - 120 - size, 0);
+  ctx.translate(CANVAS_W - 120 - size, 0);
   ctx.scale(-1, 1);
   ctx.drawImage(imgB, 0, y, size, size);
   ctx.restore();
   
-  // 下方画对话区域提示（浅色矩形）
-  ctx.fillStyle = 'rgba(200, 200, 255, 0.08)';
-  ctx.fillRect(150, 1200, 1620, 1200);
+  // 下方留空白给对话气泡
+  ctx.fillStyle = 'rgba(200, 200, 255, 0.05)';
+  ctx.fillRect(100, 1300, CANVAS_W - 200, CANVAS_H - 1400);
   
   return canvas.toDataURL('image/png');
 }
 
-// ============ 生成提示词（单页）============
-function generatePromptForPage(pageDialogues, pageIndex, totalPages) {
+// ============ 获取风格设定 ============
+function getStyleSettings() {
+  return {
+    overall: document.getElementById('styleOverall').value.trim(),
+    scene: document.getElementById('styleScene').value.trim(),
+    actionA: document.getElementById('styleActionA').value.trim(),
+    actionB: document.getElementById('styleActionB').value.trim(),
+    extra: document.getElementById('styleExtra').value.trim(),
+  };
+}
+
+// ============ 生成提示词（AI只生成角色和背景，不带气泡）============
+function generatePromptForPage(pageDialogues, pageIndex, totalPages, isFirstPage, style) {
   const typeA = MBTI_TYPES.find(t => t.code === selectedA);
   const typeB = MBTI_TYPES.find(t => t.code === selectedB);
-  const globalStyle = document.getElementById('styleInput').value.trim();
   
   const dialogueText = pageDialogues.map(d => {
     const name = d.speaker === 'a' ? typeA.name.split(' ')[0] : typeB.name.split(' ')[0];
@@ -446,35 +504,58 @@ function generatePromptForPage(pageDialogues, pageIndex, totalPages) {
   else if (/生气|烦|讨厌|滚|闭嘴|无语|无奈|唉|哎|算了|随便/.test(allText)) mood = '无奈吐槽';
   else if (/喜欢|爱你|想你|抱抱|亲亲|宝贝|亲爱的/.test(allText)) mood = '甜蜜温馨';
   
-  let userInstructionPart = '';
-  if (globalStyle) {
-    userInstructionPart = `【最高优先级 - 必须严格遵循以下用户指令】
-${globalStyle}
-
-以上用户指令必须全部体现在画面中。
-
-`;
-  }
+  let stylePart = '';
+  if (style.overall) stylePart += `整体风格：${style.overall}。\n`;
+  if (style.scene) stylePart += `场景背景：${style.scene}。\n`;
+  if (style.extra) stylePart += `画面中添加：${style.extra}。\n`;
   
-  return `${userInstructionPart}一张 MBTI 人格对话漫画图，16personalities 经典低多边形小人风格，3:4 竖版构图。
+  let actionPart = '';
+  if (style.actionA) actionPart += `${typeA.name}的表情和动作：${style.actionA}。\n`;
+  if (style.actionB) actionPart += `${typeB.name}的表情和动作：${style.actionB}。\n`;
+  
+  if (isFirstPage) {
+    // 第一页：正常生成
+    return `一张 MBTI 人格对话漫画的角色和背景图，16personalities 经典低多边形小人风格，3:4 竖版构图。
 
 这是第 ${pageIndex + 1}/${totalPages} 页。
 
-左侧是 ${typeA.name}（${typeA.desc}），右侧是 ${typeB.name}（${typeB.desc}），两人面对面。
+左侧是 ${typeA.name}（${typeA.desc}），右侧是 ${typeB.name}（${typeB.desc}），两人面对面站立，位于画面上半部分。
 
 整体情绪：${mood}。
 
-本页对话内容：
+本页对话内容（仅用于理解角色情绪，不要在图中画对话气泡和文字）：
 ${dialogueText}
 
+${stylePart}${actionPart}
 具体要求：
-1. 保持两个角色的基本颜色、发型和低多边形风格，但可以根据对话内容自由调整表情、手势、身体姿态、配件和周围元素
-2. 角色的表情和动作必须符合对话内容和情绪，不要保持参考图中的固定姿势
-3. 在画面中下部添加对话气泡，气泡里写清楚本页的对话文字
-4. 背景简洁，符合场景氛围，可以根据对话内容添加相关的场景元素
-5. 画面完整，角色和对话气泡都清晰可见，上下左右不要留白过多
+1. 保持两个角色的基本颜色、发型和低多边形风格
+2. 根据对话内容和情绪，调整角色的表情、手势和身体姿态
+3. 画面上半部分是两个角色，下半部分留空白（不要画任何东西，后续会添加对话气泡）
+4. 背景符合场景氛围，可以根据对话内容添加相关的场景元素
+5. 重要：画面中绝对不要出现任何对话气泡、文字或字幕
+6. 画面完整，角色清晰可见，上下左右不要留白过多`;
+  } else {
+    // 后续页：保持背景一致，只改角色
+    return `基于参考图修改这张 MBTI 人格对话漫画的角色和背景图。
 
-注意：不要机械地复制参考图中的角色姿势和表情，要根据对话内容生动地重新演绎。`;
+这是第 ${pageIndex + 1}/${totalPages} 页。
+
+左侧是 ${typeA.name}，右侧是 ${typeB.name}。
+
+整体情绪：${mood}。
+
+本页对话内容（仅用于理解角色情绪，不要在图中画对话气泡和文字）：
+${dialogueText}
+
+${actionPart}
+重要要求：
+1. 严格保持参考图中的背景、场景、光照、颜色和整体氛围完全不变
+2. 只修改两个角色的表情、手势和身体姿态，使其符合本页对话内容和情绪
+3. 角色的位置、大小、基本颜色和发型保持不变
+4. 画面下半部分的空白区域保持不变（不要画任何东西）
+5. 绝对不要添加任何对话气泡、文字或字幕
+6. 除了角色的表情动作外，其他所有元素都必须与参考图完全一致`;
+  }
 }
 
 // ============ 调用 Seedream 图生图 API ============
@@ -482,7 +563,7 @@ async function callSeedreamImageEdit(referenceImage, prompt) {
   const response = await fetch(SEEDREAM_API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getApiKey()}` },
-    body: JSON.stringify({ model: SEEDREAM_MODEL_ID, prompt: prompt, image: referenceImage, size: IMAGE_SIZE, response_format: 'url' }),
+    body: JSON.stringify({ model: SEEDREAM_MODEL_ID, prompt: prompt, image: referenceImage, size: `${CANVAS_W}x${CANVAS_H}`, response_format: 'url' }),
   });
   if (!response.ok) {
     const text = await response.text();
@@ -499,13 +580,199 @@ async function generatePage(pageIndex) {
   const page = pages[pageIndex];
   if (!page) return;
   
-  const referenceImage = await createReferenceImage();
-  const prompt = generatePromptForPage(page.dialogues, pageIndex, pages.length);
+  const style = getStyleSettings();
+  const isFirstPage = (pageIndex === 0);
+  
+  let referenceImage;
+  if (isFirstPage) {
+    // 第一页：用原始小人素材拼接参考图
+    referenceImage = await createReferenceImage();
+  } else {
+    // 后续页：用第一页的生成结果作为参考，保持背景一致
+    if (!pages[0].characterImageUrl) {
+      // 如果第一页还没生成，先生成第一页
+      await generatePage(0);
+    }
+    referenceImage = pages[0].characterImageUrl;
+  }
+  
+  const prompt = generatePromptForPage(page.dialogues, pageIndex, pages.length, isFirstPage, style);
   console.log(`第 ${pageIndex + 1} 页提示词:`, prompt);
   
   const imageUrl = await callSeedreamImageEdit(referenceImage, prompt);
-  page.imageUrl = imageUrl;
+  page.characterImageUrl = imageUrl;
   page.generated = true;
+  
+  // 缓存图片
+  await loadImage(imageUrl);
+}
+
+// ============ Canvas 合成（角色图 + 对话气泡 + 文字）============
+async function renderCanvas(pageIndex) {
+  const page = pages[pageIndex];
+  if (!page || !page.characterImageUrl) return;
+  
+  const canvas = document.getElementById('previewCanvas');
+  const ctx = canvas.getContext('2d');
+  
+  // 加载角色背景图
+  const charImg = await loadImage(page.characterImageUrl);
+  
+  // 绘制角色背景图（覆盖整个画布）
+  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+  ctx.drawImage(charImg, 0, 0, CANVAS_W, CANVAS_H);
+  
+  // 绘制对话气泡
+  const dialogues = page.dialogues;
+  const bubbleAreaTop = 1350;
+  const bubbleAreaBottom = CANVAS_H - 80;
+  const bubbleMaxWidth = 1300;
+  const paddingX = 100;
+  const gap = 24;
+  
+  // 计算每个气泡的高度
+  const bubbles = dialogues.map((d, i) => {
+    const isA = d.speaker === 'a';
+    const text = d.text;
+    const fontSize = 42;
+    const lineHeight = 58;
+    const bubblePaddingX = 36;
+    const bubblePaddingY = 28;
+    
+    // 文字换行
+    const lines = wrapText(ctx, text, bubbleMaxWidth - bubblePaddingX * 2, fontSize);
+    const textHeight = lines.length * lineHeight;
+    const bubbleHeight = textHeight + bubblePaddingY * 2 + 20; // +20 for triangle
+    
+    return { isA, text, lines, fontSize, lineHeight, bubblePaddingX, bubblePaddingY, bubbleHeight };
+  });
+  
+  // 计算总高度
+  const totalHeight = bubbles.reduce((sum, b) => sum + b.bubbleHeight, 0) + (bubbles.length - 1) * gap;
+  
+  // 垂直居中
+  let currentY = bubbleAreaTop + (bubbleAreaBottom - bubbleAreaTop - totalHeight) / 2;
+  if (currentY < bubbleAreaTop) currentY = bubbleAreaTop;
+  
+  // 绘制每个气泡
+  bubbles.forEach(bubble => {
+    drawBubble(ctx, bubble, paddingX, currentY, bubbleMaxWidth);
+    currentY += bubble.bubbleHeight + gap;
+  });
+}
+
+// ============ 文字换行 ============
+function wrapText(ctx, text, maxWidth, fontSize) {
+  ctx.font = `${fontSize}px -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif`;
+  const lines = [];
+  let currentLine = '';
+  
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const testLine = currentLine + char;
+    const metrics = ctx.measureText(testLine);
+    if (metrics.width > maxWidth && currentLine !== '') {
+      lines.push(currentLine);
+      currentLine = char;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  
+  return lines;
+}
+
+// ============ 绘制对话气泡 ============
+function drawBubble(ctx, bubble, paddingX, y, maxWidth) {
+  const { isA, lines, fontSize, lineHeight, bubblePaddingX, bubblePaddingY, bubbleHeight } = bubble;
+  
+  const radius = 28;
+  const triangleSize = 20;
+  
+  // 计算气泡宽度（根据文字内容）
+  ctx.font = `${fontSize}px -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif`;
+  let textWidth = 0;
+  lines.forEach(line => {
+    const w = ctx.measureText(line).width;
+    if (w > textWidth) textWidth = w;
+  });
+  const bubbleWidth = Math.min(textWidth + bubblePaddingX * 2, maxWidth);
+  
+  // 气泡位置
+  let x;
+  if (isA) {
+    x = paddingX; // 左侧
+  } else {
+    x = CANVAS_W - paddingX - bubbleWidth; // 右侧
+  }
+  
+  const bubbleTop = y + triangleSize;
+  const bubbleBottom = y + bubbleHeight;
+  
+  // 绘制阴影
+  ctx.save();
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+  ctx.shadowBlur = 12;
+  ctx.shadowOffsetY = 4;
+  
+  // 气泡背景
+  ctx.fillStyle = isA ? '#ffffff' : '#ffffff';
+  ctx.strokeStyle = isA ? '#e0e0e0' : '#e0e0e0';
+  ctx.lineWidth = 2;
+  
+  // 圆角矩形
+  ctx.beginPath();
+  ctx.moveTo(x + radius, bubbleTop);
+  ctx.lineTo(x + bubbleWidth - radius, bubbleTop);
+  ctx.quadraticCurveTo(x + bubbleWidth, bubbleTop, x + bubbleWidth, bubbleTop + radius);
+  ctx.lineTo(x + bubbleWidth, bubbleBottom - radius);
+  ctx.quadraticCurveTo(x + bubbleWidth, bubbleBottom, x + bubbleWidth - radius, bubbleBottom);
+  ctx.lineTo(x + radius, bubbleBottom);
+  ctx.quadraticCurveTo(x, bubbleBottom, x, bubbleBottom - radius);
+  ctx.lineTo(x, bubbleTop + radius);
+  ctx.quadraticCurveTo(x, bubbleTop, x + radius, bubbleTop);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+  
+  // 绘制三角（指向说话人）
+  ctx.save();
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#e0e0e0';
+  ctx.lineWidth = 2;
+  
+  const triangleY = bubbleTop + 20;
+  ctx.beginPath();
+  if (isA) {
+    // 左侧气泡，三角指向左
+    ctx.moveTo(x, triangleY);
+    ctx.lineTo(x - triangleSize, triangleY + triangleSize / 2);
+    ctx.lineTo(x, triangleY + triangleSize);
+  } else {
+    // 右侧气泡，三角指向右
+    ctx.moveTo(x + bubbleWidth, triangleY);
+    ctx.lineTo(x + bubbleWidth + triangleSize, triangleY + triangleSize / 2);
+    ctx.lineTo(x + bubbleWidth, triangleY + triangleSize);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+  
+  // 绘制文字
+  ctx.fillStyle = '#333333';
+  ctx.font = `${fontSize}px -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif`;
+  ctx.textBaseline = 'top';
+  
+  const textX = x + bubblePaddingX;
+  let textY = bubbleTop + bubblePaddingY;
+  
+  lines.forEach(line => {
+    ctx.fillText(line, textX, textY);
+    textY += lineHeight;
+  });
 }
 
 // ============ 生成当前页 ============
@@ -515,28 +782,39 @@ async function generateCurrentPage() {
   updatePagination();
   
   const btn = document.getElementById('generateCurrentBtn');
+  const stopBtn = document.getElementById('stopBtn');
   const loading = document.getElementById('loading');
   const loadingText = document.getElementById('loadingText');
   const placeholder = document.getElementById('placeholder');
-  const img = document.getElementById('resultImage');
+  const canvas = document.getElementById('previewCanvas');
   
+  shouldStop = false;
   btn.disabled = true;
+  stopBtn.classList.add('show');
   placeholder.style.display = 'none';
-  img.style.display = 'none';
+  canvas.style.display = 'none';
   loading.style.display = 'block';
   loadingText.textContent = `正在生成第 ${currentPageIndex + 1}/${pages.length} 页...`;
   
   try {
     await generatePage(currentPageIndex);
+    if (shouldStop) throw new Error('已停止生成');
     renderPageNav();
+    await renderCanvas(currentPageIndex);
     showPage(currentPageIndex);
   } catch (error) {
     console.error('生成失败:', error);
     loading.style.display = 'none';
-    placeholder.style.display = 'block';
-    placeholder.querySelector('.text').innerHTML = `生成失败：${error.message}<br><br>请重试`;
+    if (error.message === '已停止生成') {
+      placeholder.style.display = 'block';
+      placeholder.querySelector('.text').innerHTML = `已停止生成<br><br>已生成的页面可以在上方页码切换查看`;
+    } else {
+      placeholder.style.display = 'block';
+      placeholder.querySelector('.text').innerHTML = `生成失败：${error.message}<br><br>请重试`;
+    }
   } finally {
     btn.disabled = false;
+    stopBtn.classList.remove('show');
   }
 }
 
@@ -548,43 +826,78 @@ async function generateAll() {
   
   const btn = document.getElementById('generateAllBtn');
   const btn2 = document.getElementById('generateCurrentBtn');
+  const stopBtn = document.getElementById('stopBtn');
   const loading = document.getElementById('loading');
   const loadingText = document.getElementById('loadingText');
   const progressFill = document.getElementById('progressFill');
   const placeholder = document.getElementById('placeholder');
-  const img = document.getElementById('resultImage');
+  const canvas = document.getElementById('previewCanvas');
   
+  shouldStop = false;
   btn.disabled = true;
   btn2.disabled = true;
+  stopBtn.classList.add('show');
   placeholder.style.display = 'none';
-  img.style.display = 'none';
+  canvas.style.display = 'none';
   loading.style.display = 'block';
   
+  let stopped = false;
+  let lastGeneratedPage = -1;
+  
   for (let i = 0; i < pages.length; i++) {
+    if (shouldStop) { stopped = true; break; }
+    
     currentPageIndex = i;
     renderPageNav();
-    const progress = ((i) / pages.length) * 100;
+    const progress = (i / pages.length) * 100;
     progressFill.style.width = progress + '%';
     loadingText.textContent = `正在生成第 ${i + 1}/${pages.length} 页...`;
     
     try {
       await generatePage(i);
+      lastGeneratedPage = i;
     } catch (error) {
       console.error(`第 ${i + 1} 页生成失败:`, error);
+      if (error.message === '已停止生成') {
+        stopped = true;
+        break;
+      }
       alert(`第 ${i + 1} 页生成失败：${error.message}`);
       break;
     }
   }
   
-  progressFill.style.width = '100%';
-  loadingText.textContent = '全部生成完成！';
-  setTimeout(() => { loading.style.display = 'none'; }, 1000);
+  if (stopped) {
+    progressFill.style.width = ((lastGeneratedPage + 1) / pages.length * 100) + '%';
+    loadingText.textContent = `已停止生成（已完成 ${lastGeneratedPage + 1}/${pages.length} 页）`;
+  } else {
+    progressFill.style.width = '100%';
+    loadingText.textContent = '全部生成完成！';
+  }
+  setTimeout(() => { loading.style.display = 'none'; }, 1500);
   
-  currentPageIndex = 0;
+  // 跳转到最后生成的页面（或第一页）
+  currentPageIndex = lastGeneratedPage >= 0 ? lastGeneratedPage : 0;
   renderPageNav();
-  showPage(0);
+  if (pages[currentPageIndex] && pages[currentPageIndex].characterImageUrl) {
+    await renderCanvas(currentPageIndex);
+  }
+  showPage(currentPageIndex);
   btn.disabled = false;
   btn2.disabled = false;
+  stopBtn.classList.remove('show');
+}
+
+// ============ 停止生成 ============
+function stopGeneration() {
+  shouldStop = true;
+  const stopBtn = document.getElementById('stopBtn');
+  stopBtn.textContent = '⏳ 正在停止...';
+  stopBtn.disabled = true;
+  setTimeout(() => {
+    stopBtn.textContent = '⏹ 停止生成';
+    stopBtn.disabled = false;
+  }, 2000);
 }
 
 // ============ 修改当前页 ============
@@ -593,34 +906,38 @@ async function modifyCurrentPage() {
   if (!modifyInstruction) { alert('请输入修改指令'); return; }
   
   const page = pages[currentPageIndex];
-  if (!page || !page.imageUrl) { alert('当前页还没有生成图片'); return; }
+  if (!page || !page.characterImageUrl) { alert('当前页还没有生成图片'); return; }
   
   const btn = document.getElementById('modifyBtn');
   const loading = document.getElementById('loading');
   const loadingText = document.getElementById('loadingText');
-  const img = document.getElementById('resultImage');
+  const canvas = document.getElementById('previewCanvas');
   
   btn.disabled = true;
-  img.style.display = 'none';
+  canvas.style.display = 'none';
   loading.style.display = 'block';
   loadingText.textContent = '正在基于当前图修改...';
   
   try {
-    // 用当前图片URL作为参考图（API支持URL格式）
     const typeA = MBTI_TYPES.find(t => t.code === selectedA);
     const typeB = MBTI_TYPES.find(t => t.code === selectedB);
-    const prompt = `基于这张 MBTI 对话漫画图进行修改。
+    
+    const prompt = `基于这张 MBTI 人格对话漫画的角色和背景图进行修改。
 
 修改要求：${modifyInstruction}
 
 保持要求：
 1. 保持 ${typeA.name} 和 ${typeB.name} 两个角色的基本形象、颜色和低多边形风格不变
-2. 保持原有的对话气泡和对话文字不变
-3. 只修改用户指定的部分，不要改变其他元素
-4. 保持 3:4 竖版构图和画面完整性`;
+2. 保持背景、场景、光照和整体氛围不变
+3. 画面下半部分的空白区域保持不变（不要画任何东西）
+4. 绝对不要添加任何对话气泡、文字或字幕
+5. 只修改用户指定的部分，不要改变其他元素`;
     
-    const newImageUrl = await callSeedreamImageEdit(page.imageUrl, prompt);
-    page.imageUrl = newImageUrl;
+    const newImageUrl = await callSeedreamImageEdit(page.characterImageUrl, prompt);
+    page.characterImageUrl = newImageUrl;
+    // 清除缓存
+    delete characterImages[newImageUrl];
+    await renderCanvas(currentPageIndex);
     showPage(currentPageIndex);
     document.getElementById('modifyInput').value = '';
   } catch (error) {
@@ -635,29 +952,27 @@ async function modifyCurrentPage() {
 
 // ============ 下载 ============
 function downloadCurrentPage() {
-  const page = pages[currentPageIndex];
-  if (!page || !page.imageUrl) return;
+  const canvas = document.getElementById('previewCanvas');
   const link = document.createElement('a');
-  link.href = page.imageUrl;
   link.download = `MBTI对话图_第${currentPageIndex + 1}页.png`;
-  link.target = '_blank';
-  document.body.appendChild(link);
+  link.href = canvas.toDataURL('image/png');
   link.click();
-  document.body.removeChild(link);
 }
 
 function downloadAllPages() {
-  pages.forEach((page, i) => {
-    if (page.imageUrl) {
-      setTimeout(() => {
-        const link = document.createElement('a');
-        link.href = page.imageUrl;
-        link.download = `MBTI对话图_第${i + 1}页.png`;
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }, i * 500);
+  pages.forEach(async (page, i) => {
+    if (page.characterImageUrl) {
+      // 临时切换到该页渲染 Canvas
+      const savedIndex = currentPageIndex;
+      currentPageIndex = i;
+      await renderCanvas(i);
+      const canvas = document.getElementById('previewCanvas');
+      const link = document.createElement('a');
+      link.download = `MBTI对话图_第${i + 1}页.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      currentPageIndex = savedIndex;
+      await new Promise(r => setTimeout(r, 500));
     }
   });
 }
