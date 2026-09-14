@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MBTI 对话图生成器</title>
+<title>MBTI 对话图生成器 v4</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -12,13 +12,13 @@ body {
   min-height: 100vh;
   padding: 16px;
 }
-.container { max-width: 1500px; margin: 0 auto; }
+.container { max-width: 1600px; margin: 0 auto; }
 h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
 .subtitle { color: rgba(255,255,255,0.8); text-align: center; margin-bottom: 16px; font-size: 13px; }
 .main { display: flex; gap: 16px; align-items: flex-start; }
 
 .panel { background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); }
-.control-panel { flex: 0 0 460px; max-height: calc(100vh - 100px); overflow-y: auto; }
+.control-panel { flex: 0 0 500px; max-height: calc(100vh - 100px); overflow-y: auto; }
 .preview-panel { flex: 1; min-height: 700px; display: flex; flex-direction: column; }
 
 .section { margin-bottom: 18px; }
@@ -45,18 +45,23 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
 .dialogue-text:focus { outline: none; border-color: #7c4dff; box-shadow: 0 0 0 2px rgba(124, 77, 255, 0.1); }
 .delete-btn { flex: 0 0 28px; height: 34px; border: none; background: #ffebee; color: #e53935; border-radius: 7px; cursor: pointer; font-size: 14px; }
 .delete-btn:hover { background: #ffcdd2; }
+.split-btn { flex: 0 0 28px; height: 34px; border: none; background: #e3f2fd; color: #1976d2; border-radius: 7px; cursor: pointer; font-size: 14px; font-weight: 700; }
+.split-btn:hover { background: #bbdefb; }
+.page-divider { text-align: center; padding: 6px 0; position: relative; }
+.page-divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: dashed #ccc; }
+.page-divider span { background: #fff; padding: 0 10px; position: relative; font-size: 10px; color: #999; }
 .add-btn { width: 100%; padding: 8px; border: 2px dashed #ccc; background: #fafafa; border-radius: 7px; cursor: pointer; font-size: 13px; color: #666; }
 .add-btn:hover { border-color: #7c4dff; color: #7c4dff; background: #f3e5f5; }
+
+/* AI辅助按钮 */
+.ai-assist-btn { width: 100%; padding: 10px; background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: all 0.2s; }
+.ai-assist-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4); }
+.ai-assist-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* 输入框通用 */
 .text-input { width: 100%; padding: 9px 11px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; }
 .text-input:focus { outline: none; border-color: #7c4dff; box-shadow: 0 0 0 2px rgba(124, 77, 255, 0.1); }
 .hint { font-size: 11px; color: #999; margin-top: 5px; line-height: 1.4; }
-
-/* 分页设置 */
-.pagination-setting { display: flex; align-items: center; gap: 10px; }
-.pagination-setting label { font-size: 13px; color: #555; }
-.pagination-setting select { padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
 
 /* 风格指令字段 */
 .style-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -66,6 +71,38 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
 .style-field input { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; font-family: inherit; }
 .style-field input:focus { outline: none; border-color: #7c4dff; box-shadow: 0 0 0 2px rgba(124, 77, 255, 0.1); }
 
+/* 页面管理 */
+.page-manager { border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden; }
+.page-card { border-bottom: 1px solid #e0e0e0; }
+.page-card:last-child { border-bottom: none; }
+.page-card-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: #fafafa; cursor: pointer; transition: background 0.2s; }
+.page-card-header:hover { background: #f3e5f5; }
+.page-card-title { font-size: 13px; font-weight: 600; color: #333; display: flex; align-items: center; gap: 8px; }
+.page-card-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #7c4dff; color: #fff; }
+.page-card-badge.generated { background: #4caf50; }
+.page-card-badge.generating { background: #ff9800; }
+.page-card-actions { display: flex; gap: 4px; }
+.page-card-btn { padding: 4px 8px; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 500; }
+.page-card-btn.generate { background: #7c4dff; color: #fff; }
+.page-card-btn.generate:hover { background: #651fff; }
+.page-card-btn.generate:disabled { opacity: 0.5; cursor: not-allowed; }
+.page-card-btn.delete { background: #ffebee; color: #e53935; }
+.page-card-btn.delete:hover { background: #ffcdd2; }
+.page-card-body { padding: 12px; display: none; }
+.page-card.expanded .page-card-body { display: block; }
+
+/* 对话选择 */
+.dialogue-select-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.dialogue-chip { padding: 4px 10px; border: 1px solid #ddd; border-radius: 12px; font-size: 11px; cursor: pointer; background: #fafafa; transition: all 0.2s; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dialogue-chip:hover { border-color: #7c4dff; }
+.dialogue-chip.selected { background: #ede7f6; border-color: #7c4dff; color: #7c4dff; font-weight: 600; }
+
+/* 进度条 */
+.page-progress { margin-top: 8px; }
+.progress-bar { width: 100%; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, #7c4dff, #536dfe); transition: width 0.3s; width: 0%; }
+.progress-text { font-size: 11px; color: #666; margin-top: 4px; }
+
 /* 生成按钮 */
 .generate-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #7c4dff 0%, #536dfe 100%); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(124, 77, 255, 0.4); }
 .generate-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(124, 77, 255, 0.5); }
@@ -74,6 +111,9 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
 .btn-row .generate-btn { flex: 1; padding: 10px; font-size: 13px; }
 .btn-secondary { background: #fff; color: #7c4dff; border: 2px solid #7c4dff; box-shadow: none; }
 .btn-secondary:hover:not(:disabled) { background: #f3e5f5; }
+.btn-clear { background: #fff; color: #f44336; border: 2px solid #f44336; box-shadow: none; }
+.btn-clear:hover:not(:disabled) { background: #ffebee; }
+.btn-save { background: linear-gradient(135deg, #4caf50 0%, #43a047 100%); }
 .stop-btn { width: 100%; margin-top: 8px; padding: 10px; background: #f44336; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: none; transition: all 0.2s; }
 .stop-btn:hover { background: #e53935; transform: translateY(-1px); }
 .stop-btn.show { display: block; }
@@ -85,6 +125,8 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
 .page-tab.active { background: #7c4dff; color: #fff; border-color: #7c4dff; }
 .page-tab.generated { border-color: #4caf50; color: #4caf50; }
 .page-tab.active.generated { background: #4caf50; color: #fff; border-color: #4caf50; }
+.page-tab.generating { border-color: #ff9800; color: #ff9800; animation: pulse 1s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 /* Canvas 预览 */
 .preview-canvas-wrap { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 400px; }
@@ -98,8 +140,6 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
 .loading .spinner { width: 36px; height: 36px; border: 4px solid #e0e0e0; border-top-color: #7c4dff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 12px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading .text { font-size: 13px; line-height: 1.6; }
-.progress-bar { width: 200px; height: 6px; background: #e0e0e0; border-radius: 3px; margin: 12px auto 0; overflow: hidden; }
-.progress-fill { height: 100%; background: linear-gradient(90deg, #7c4dff, #536dfe); transition: width 0.3s; width: 0%; }
 
 /* 修改区域 */
 .modify-section { margin-top: 14px; padding-top: 14px; border-top: 1px solid #eee; display: none; }
@@ -110,11 +150,34 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
 .modify-btn:hover:not(:disabled) { transform: translateY(-1px); }
 .modify-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
+/* 气泡调整面板 */
+.bubble-adjust-panel { padding: 14px; background: linear-gradient(135deg, #f5f3ff 0%, #f0f9ff 100%); border-radius: 12px; margin-top: 12px; border: 1px solid #e0e7ff; }
+.adjust-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+.adjust-item label { display: block; font-size: 11px; color: #555; margin-bottom: 4px; font-weight: 500; }
+.adjust-item label span { color: #6366f1; font-weight: 600; }
+.adjust-item input[type="range"] { width: 100%; height: 4px; -webkit-appearance: none; background: #e0e7ff; border-radius: 2px; outline: none; }
+.adjust-item input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; background: #6366f1; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 4px rgba(99,102,241,0.3); }
+.reset-bubble-btn { width: 100%; padding: 7px; border: 1px solid #c7d2fe; background: #fff; color: #6366f1; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 500; }
+.reset-bubble-btn:hover { background: #eef2ff; }
+
 /* 下载按钮 */
 .download-row { display: flex; gap: 8px; margin-top: 12px; }
 .download-btn { flex: 1; padding: 9px; background: #4caf50; color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; display: none; transition: all 0.2s; }
 .download-btn:hover { background: #43a047; }
 .download-btn.show { display: block; }
+
+/* 历史记录 */
+.history-list { max-height: 200px; overflow-y: auto; margin-top: 8px; }
+.history-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 6px; background: #fafafa; transition: all 0.2s; }
+.history-item:hover { border-color: #7c4dff; background: #f3e5f5; }
+.history-info { flex: 1; min-width: 0; cursor: pointer; }
+.history-name { font-size: 12px; font-weight: 600; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.history-meta { font-size: 10px; color: #999; margin-top: 2px; }
+.history-actions { display: flex; gap: 4px; margin-left: 8px; }
+.history-load-btn { padding: 4px 8px; background: #7c4dff; color: #fff; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; }
+.history-load-btn:hover { background: #651fff; }
+.history-delete-btn { padding: 4px 8px; background: #ffebee; color: #e53935; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; }
+.history-delete-btn:hover { background: #ffcdd2; }
 
 /* 响应式 */
 @media (max-width: 900px) {
@@ -123,7 +186,6 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
   .style-grid { grid-template-columns: 1fr; }
 }
 </style>
-<!-- 本地配置文件（可选，不提交到 Git） -->
 <script src="config.js"></script>
 </head>
 <body>
@@ -131,16 +193,15 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
   <!-- API Key 横幅 -->
   <div id="apiKeyBanner" style="display:none; background: #fff3cd; border: 1px solid #ffc107; border-radius: 10px; padding: 16px; margin-bottom: 16px; text-align: center;">
     <h3 style="margin: 0 0 10px 0; color: #856404; font-size: 16px;">🔑 请先配置 API Key</h3>
-    <p style="margin: 0 0 12px 0; color: #856404; font-size: 13px;">首次使用需要填入火山方舟 Seedream API Key，保存后浏览器会记住，下次打开自动使用。</p>
+    <p style="margin: 0 0 12px 0; color: #856404; font-size: 13px;">首次使用需要填入火山方舟 Seedream API Key，保存后浏览器会记住。</p>
     <div style="display: flex; gap: 8px; max-width: 500px; margin: 0 auto;">
       <input type="password" id="apiKeyInput" placeholder="ark-xxxxxxxxxxxxxxxx" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;">
       <button onclick="saveApiKeyFromInput()" style="padding: 10px 20px; background: #ffc107; color: #000; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">保存 Key</button>
     </div>
-    <p style="margin: 10px 0 0 0; color: #856404; font-size: 11px;">Key 只保存在你的浏览器本地，不会上传。获取：火山引擎控制台 → 火山方舟 → API Key 管理</p>
   </div>
   
-  <h1>MBTI 对话图生成器</h1>
-  <p class="subtitle">AI 生成角色场景 · 脚本合成对话气泡 · 多页背景一致 · 文字实时编辑</p>
+  <h1>MBTI 对话图生成器 v4</h1>
+  <p class="subtitle">手动分页 · 每页独立设定 · 真实生成进度 · AI辅助切页 · 背景全图延伸</p>
   
   <div class="main">
     <!-- 左侧控制面板 -->
@@ -159,58 +220,49 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
       
       <!-- 对话内容 -->
       <div class="section">
-        <div class="section-title">对话内容 <span style="font-size:11px;color:#999;font-weight:normal;">（编辑后右侧气泡实时更新）</span></div>
+        <div class="section-title">对话内容</div>
         <div class="dialogue-list" id="dialogueList"></div>
         <button class="add-btn" onclick="addDialogue()">+ 添加一条对话</button>
+        <button class="ai-assist-btn" id="aiAssistBtn" onclick="aiAssist()">🤖 AI 辅助切页和设定画面</button>
       </div>
       
-      <!-- 分页设置 -->
+      <!-- 全局风格 -->
       <div class="section">
-        <div class="section-title">分页设置</div>
-        <div class="pagination-setting">
-          <label>每页对话轮数：</label>
-          <select id="perPageSelect" onchange="updatePagination()">
-            <option value="2">2 轮/页</option>
-            <option value="3" selected>3 轮/页</option>
-            <option value="4">4 轮/页</option>
-          </select>
-        </div>
-        <p class="hint" id="pageInfoHint">共 1 页对话</p>
-      </div>
-      
-      <!-- 风格指令（引导式） -->
-      <div class="section">
-        <div class="section-title">画面设定 <span style="font-size:11px;color:#999;font-weight:normal;">（不填则 AI 自由发挥）</span></div>
+        <div class="section-title">全局风格设定 <span style="font-size:11px;color:#999;font-weight:normal;">（应用到所有页）</span></div>
         <div class="style-grid">
           <div class="style-field full">
             <label>🎨 整体风格</label>
-            <input type="text" id="styleOverall" placeholder="搞笑 / 温馨 / 赛博朋克 / 复古 / 治愈系...">
+            <input type="text" id="globalOverall" placeholder="搞笑 / 温馨 / 赛博朋克 / 复古 / 治愈系...">
           </div>
           <div class="style-field full">
-            <label>🏠 场景背景</label>
-            <input type="text" id="styleScene" placeholder="咖啡馆 / 办公室 / 户外公园 / 家里客厅 / 火锅店...">
-          </div>
-          <div class="style-field">
-            <label>😀 A 的表情动作</label>
-            <input type="text" id="styleActionA" placeholder="托腮思考 / 微笑 / 生气 / 扶额...">
-          </div>
-          <div class="style-field">
-            <label>😀 B 的表情动作</label>
-            <input type="text" id="styleActionB" placeholder="星星眼 / 委屈 / 兴奋 / 抱臂...">
-          </div>
-          <div class="style-field full">
-            <label>✨ 额外元素</label>
-            <input type="text" id="styleExtra" placeholder="加一只猫 / 桌上有咖啡 / 窗外下雨 / 旁边有火锅...">
+            <label>🏠 统一场景背景</label>
+            <input type="text" id="globalScene" placeholder="咖啡馆 / 办公室 / 户外公园 / 家里客厅...（不填则每页独立）">
           </div>
         </div>
       </div>
       
-      <!-- 生成按钮 -->
+      <!-- 页面管理 -->
+      <div class="section">
+        <div class="section-title">页面管理 <span style="font-size:11px;color:#999;font-weight:normal;">（点击展开设置）</span></div>
+        <div class="page-manager" id="pageManager"></div>
+        <button class="add-btn" style="margin-top:8px;" onclick="addPage()">+ 添加一页</button>
+      </div>
+      
+      <!-- 操作按钮 -->
       <div class="btn-row">
         <button class="generate-btn" id="generateAllBtn" onclick="generateAll()">生成全部</button>
-        <button class="generate-btn btn-secondary" id="generateCurrentBtn" onclick="generateCurrentPage()">生成当前页</button>
+        <button class="generate-btn btn-save" onclick="saveCurrentSettings()">💾 保存</button>
+        <button class="generate-btn btn-clear" onclick="clearAllSettings()">🗑 清除</button>
       </div>
       <button class="stop-btn" id="stopBtn" onclick="stopGeneration()">⏹ 停止生成</button>
+      
+      <!-- 历史记录 -->
+      <div class="section" style="margin-top:18px;">
+        <div class="section-title">历史记录</div>
+        <div class="history-list" id="historyList">
+          <p class="hint" style="text-align:center;margin:10px 0;">暂无保存的记录</p>
+        </div>
+      </div>
     </div>
     
     <!-- 右侧预览区 -->
@@ -222,27 +274,49 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
       <div class="preview-canvas-wrap">
         <div class="preview-placeholder" id="placeholder">
           <div class="icon">🎨</div>
-          <div class="text">选择 MBTI 并输入对话后<br>点击「生成全部」或「生成当前页」</div>
+          <div class="text">选择 MBTI、输入对话、设置页面后<br>点击「生成全部」或单页的「生成」按钮</div>
         </div>
         <div class="loading" id="loading">
           <div class="spinner"></div>
           <div class="text" id="loadingText">AI 正在生成中...</div>
-          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
         </div>
         <canvas id="previewCanvas" width="1920" height="2560"></canvas>
       </div>
       
+      <!-- 气泡调整面板 -->
+      <div class="bubble-adjust-panel" id="bubbleAdjustPanel" style="display:none;">
+        <div class="section-title" style="margin-bottom:10px;font-size:13px;">🎨 气泡调整（实时预览）</div>
+        <div class="adjust-grid">
+          <div class="adjust-item">
+            <label>字体大小 <span id="fontSizeVal">52px</span></label>
+            <input type="range" min="30" max="80" value="52" oninput="updateBubbleSetting('fontSize', this.value)">
+          </div>
+          <div class="adjust-item">
+            <label>气泡宽度 <span id="maxWidthVal">75%</span></label>
+            <input type="range" min="50" max="90" value="75" oninput="updateBubbleSetting('maxWidth', this.value)">
+          </div>
+          <div class="adjust-item">
+            <label>垂直位置 <span id="verticalPosVal">56%</span></label>
+            <input type="range" min="40" max="75" value="56" oninput="updateBubbleSetting('verticalPos', this.value)">
+          </div>
+          <div class="adjust-item">
+            <label>不透明度 <span id="opacityVal">95%</span></label>
+            <input type="range" min="70" max="100" value="95" oninput="updateBubbleSetting('opacity', this.value / 100)">
+          </div>
+        </div>
+        <button class="reset-bubble-btn" onclick="resetBubbleSettings()">↺ 恢复默认</button>
+      </div>
+      
       <!-- 修改区域 -->
       <div class="modify-section" id="modifySection">
-        <div class="section-title" style="margin-bottom:8px;">修改这张图（只改角色和背景，气泡不变）</div>
-        <textarea class="modify-input" id="modifyInput" rows="2" placeholder="输入修改指令，例如：把背景改成咖啡馆，让INTJ笑一下，给ISFP加一杯奶茶"></textarea>
+        <div class="section-title" style="margin-bottom:8px;">修改这张图</div>
+        <textarea class="modify-input" id="modifyInput" rows="2" placeholder="输入修改指令，例如：把背景改成咖啡馆，让INTJ笑一下"></textarea>
         <button class="modify-btn" id="modifyBtn" onclick="modifyCurrentPage()">基于这张图修改</button>
       </div>
       
       <!-- 下载按钮 -->
       <div class="download-row">
         <button class="download-btn" id="downloadCurrentBtn" onclick="downloadCurrentPage()">下载当前页</button>
-        <button class="download-btn" id="downloadAllBtn" onclick="downloadAllPages()">下载全部</button>
       </div>
     </div>
   </div>
@@ -251,6 +325,7 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
 <script>
 // ============ 配置 ============
 const API_KEY_STORAGE_KEY = 'mbti_dialogue_api_key';
+const HISTORY_STORAGE_KEY = 'mbti_dialogue_history_v4';
 const SEEDREAM_MODEL_ID = 'doubao-seedream-4-5-251128';
 const SEEDREAM_API_URL = 'https://ark.cn-beijing.volces.com/api/v3/images/generations';
 const CANVAS_W = 1920;
@@ -278,7 +353,7 @@ function saveApiKeyFromInput() {
   if (!key) { alert('请输入 API Key'); return; }
   saveApiKey(key);
   showApiKeyBanner();
-  alert('API Key 已保存，现在可以生成图片了！');
+  alert('API Key 已保存！');
 }
 
 // ============ MBTI 数据 ============
@@ -304,17 +379,26 @@ const MBTI_TYPES = [
 // ============ 状态 ============
 let selectedA = 'intj';
 let selectedB = 'enfp';
-let dialogues = [
+let allDialogues = [
   { speaker: 'a', text: '我已经把下周的计划全部安排好了。' },
   { speaker: 'b', text: '哇！不过我们要不要先去吃个火锅再说？' },
   { speaker: 'a', text: '……不在计划内。' },
   { speaker: 'b', text: '那计划外的快乐呢？' },
   { speaker: 'a', text: '……你赢了。' },
 ];
-let pages = []; // 每页：{ dialogues, characterImageUrl, generated }
+let pages = [];
 let currentPageIndex = 0;
-let characterImages = {}; // 缓存加载的角色图片
-let shouldStop = false; // 停止生成标志
+let characterImages = {};
+let shouldStop = false;
+let currentAbortController = null;
+
+// 气泡调整参数
+let bubbleSettings = {
+  fontSize: 52,      // 字体大小
+  maxWidth: 75,      // 气泡最大宽度（百分比）
+  verticalPos: 56,   // 气泡区域起始位置（百分比）
+  opacity: 0.95,     // 气泡不透明度
+};
 
 // ============ 初始化 MBTI 选择器 ============
 function initMbtiGrid(containerId, selected, onSelect) {
@@ -335,54 +419,215 @@ function selectB(code) { selectedB = code; initMbtiGrid('mbtiGridB', selectedB, 
 function renderDialogues() {
   const list = document.getElementById('dialogueList');
   list.innerHTML = '';
-  dialogues.forEach((d, i) => {
+  
+  // 计算每条对话属于哪一页
+  const dialoguePageMap = {};
+  pages.forEach((page, pi) => {
+    page.dialogueIds.forEach(id => { dialoguePageMap[id] = pi; });
+  });
+  
+  allDialogues.forEach((d, i) => {
     const item = document.createElement('div');
     item.className = 'dialogue-item';
+    const pageNum = dialoguePageMap[i] !== undefined ? dialoguePageMap[i] + 1 : '?';
     item.innerHTML = `
-      <button class="speaker-btn ${d.speaker === 'a' ? 'speaker-a' : 'speaker-b'}" onclick="toggleSpeaker(${i})">${d.speaker.toUpperCase()}</button>
-      <textarea class="dialogue-text" rows="1" oninput="updateDialogue(${i}, this.value)">${d.text}</textarea>
+      <button class="speaker-btn ${d.speaker === 'a' ? 'speaker-a' : 'speaker-b'}" onclick="toggleSpeaker(${i})" title="切换说话人">${d.speaker.toUpperCase()}</button>
+      <textarea class="dialogue-text" rows="1" oninput="updateDialogue(${i}, this.value)" placeholder="输入对话内容...">${d.text}</textarea>
+      <button class="split-btn" onclick="splitAfterDialogue(${i})" title="在此处分页">↵</button>
       <button class="delete-btn" onclick="deleteDialogue(${i})">×</button>
     `;
     list.appendChild(item);
+    
+    // 如果下一条对话属于不同页，显示分页符
+    if (i < allDialogues.length - 1 && dialoguePageMap[i] !== undefined && dialoguePageMap[i+1] !== undefined && dialoguePageMap[i] !== dialoguePageMap[i+1]) {
+      const divider = document.createElement('div');
+      divider.className = 'page-divider';
+      divider.innerHTML = `<span>—— 第 ${dialoguePageMap[i]+1} 页结束 ——</span>`;
+      list.appendChild(divider);
+    }
   });
 }
-function toggleSpeaker(i) { dialogues[i].speaker = dialogues[i].speaker === 'a' ? 'b' : 'a'; renderDialogues(); updatePagination(); }
-function updateDialogue(i, text) {
-  dialogues[i].text = text;
-  // 实时更新当前页的 Canvas（如果已生成）
-  if (pages[currentPageIndex] && pages[currentPageIndex].characterImageUrl) {
-    renderCanvas(currentPageIndex);
+function toggleSpeaker(i) { allDialogues[i].speaker = allDialogues[i].speaker === 'a' ? 'b' : 'a'; renderDialogues(); }
+function updateDialogue(i, text) { allDialogues[i].text = text; }
+
+// 在第 i 条对话后分页
+function splitAfterDialogue(i) {
+  if (i >= allDialogues.length - 1) return;
+  
+  // 找到包含第 i 条对话的页面
+  const pageIndex = pages.findIndex(p => p.dialogueIds.includes(i));
+  if (pageIndex === -1) return;
+  
+  const page = pages[pageIndex];
+  const idxInPage = page.dialogueIds.indexOf(i);
+  
+  // 该页中 i 之后的对话
+  const afterIds = page.dialogueIds.slice(idxInPage + 1);
+  
+  if (afterIds.length === 0) return;
+  
+  // 从当前页移除
+  page.dialogueIds = page.dialogueIds.slice(0, idxInPage + 1);
+  
+  // 新建一页，包含之后的对话
+  const newPage = {
+    id: Date.now(),
+    dialogueIds: afterIds,
+    style: { scene: '', actionA: '', actionB: '', extra: '' },
+    characterImageUrl: null,
+    generated: false,
+    generating: false,
+    progress: 0,
+    progressText: ''
+  };
+  
+  // 插入到当前页之后
+  pages.splice(pageIndex + 1, 0, newPage);
+  
+  // 把后续页面中也包含这些对话的移除（避免重复）
+  for (let j = pageIndex + 2; j < pages.length; j++) {
+    pages[j].dialogueIds = pages[j].dialogueIds.filter(id => !afterIds.includes(id));
   }
+  
+  renderDialogues();
+  renderPageManager();
+  renderPageNav();
 }
-function deleteDialogue(i) { if (dialogues.length <= 1) return; dialogues.splice(i, 1); renderDialogues(); updatePagination(); }
+function deleteDialogue(i) {
+  if (allDialogues.length <= 1) return;
+  allDialogues.splice(i, 1);
+  renderDialogues();
+  // 从所有页面中移除该对话索引
+  pages.forEach(p => { p.dialogueIds = p.dialogueIds.filter(id => id !== i); });
+  // 调整大于i的索引
+  pages.forEach(p => { p.dialogueIds = p.dialogueIds.map(id => id > i ? id - 1 : id); });
+  renderPageManager();
+  renderPageNav();
+}
 function addDialogue() {
-  const lastSpeaker = dialogues[dialogues.length - 1].speaker;
-  dialogues.push({ speaker: lastSpeaker === 'a' ? 'b' : 'a', text: '' });
-  renderDialogues(); updatePagination();
+  const lastSpeaker = allDialogues[allDialogues.length - 1].speaker;
+  allDialogues.push({ speaker: lastSpeaker === 'a' ? 'b' : 'a', text: '' });
+  renderDialogues();
 }
 
-// ============ 分页逻辑 ============
-function updatePagination() {
-  const perPage = parseInt(document.getElementById('perPageSelect').value);
-  pages = [];
-  for (let i = 0; i < dialogues.length; i += perPage) {
-    pages.push({ dialogues: dialogues.slice(i, i + perPage), characterImageUrl: null, generated: false });
-  }
+// ============ 页面管理 ============
+function createDefaultPages() {
+  pages = [
+    { id: Date.now(), dialogueIds: [0, 1, 2], style: { scene: '', actionA: '', actionB: '', extra: '' }, characterImageUrl: null, generated: false, generating: false, progress: 0, progressText: '' },
+    { id: Date.now() + 1, dialogueIds: [3, 4], style: { scene: '', actionA: '', actionB: '', extra: '' }, characterImageUrl: null, generated: false, generating: false, progress: 0, progressText: '' },
+  ];
+}
+
+function addPage() {
+  pages.push({ id: Date.now(), dialogueIds: [], style: { scene: '', actionA: '', actionB: '', extra: '' }, characterImageUrl: null, generated: false, generating: false, progress: 0, progressText: '' });
+  renderPageManager();
+  renderPageNav();
+}
+
+function deletePage(index) {
+  if (pages.length <= 1) { alert('至少保留一页'); return; }
+  if (!confirm('确定删除这一页吗？')) return;
+  pages.splice(index, 1);
   if (currentPageIndex >= pages.length) currentPageIndex = pages.length - 1;
-  if (currentPageIndex < 0) currentPageIndex = 0;
-  document.getElementById('pageInfoHint').textContent = `共 ${pages.length} 页对话`;
+  renderPageManager();
   renderPageNav();
   showPage(currentPageIndex);
 }
 
+function toggleDialogueInPage(pageIndex, dialogueId) {
+  const page = pages[pageIndex];
+  const idx = page.dialogueIds.indexOf(dialogueId);
+  if (idx >= 0) page.dialogueIds.splice(idx, 1);
+  else page.dialogueIds.push(dialogueId);
+  page.dialogueIds.sort((a, b) => a - b);
+  renderPageManager();
+}
+
+function updatePageStyle(pageIndex, field, value) {
+  pages[pageIndex].style[field] = value;
+}
+
+function renderPageManager() {
+  const container = document.getElementById('pageManager');
+  container.innerHTML = '';
+  pages.forEach((page, i) => {
+    const card = document.createElement('div');
+    card.className = 'page-card' + (i === currentPageIndex ? ' expanded' : '');
+    
+    let badgeClass = '';
+    let badgeText = `第${i+1}页`;
+    if (page.generating) { badgeClass = 'generating'; badgeText = '生成中'; }
+    else if (page.generated) { badgeClass = 'generated'; badgeText = '已生成'; }
+    
+    const dialogueChips = allDialogues.map((d, di) => {
+      const selected = page.dialogueIds.includes(di);
+      const text = d.text.substring(0, 15) + (d.text.length > 15 ? '...' : '');
+      return `<div class="dialogue-chip ${selected ? 'selected' : ''}" onclick="toggleDialogueInPage(${i}, ${di})" title="${d.text}">${di+1}. ${d.speaker.toUpperCase()}: ${text || '(空)'}</div>`;
+    }).join('');
+    
+    card.innerHTML = `
+      <div class="page-card-header" onclick="togglePageCard(${i})">
+        <div class="page-card-title">
+          <span class="page-card-badge ${badgeClass}">${badgeText}</span>
+          <span>${page.dialogueIds.length} 条对话</span>
+        </div>
+        <div class="page-card-actions">
+          <button class="page-card-btn generate" onclick="event.stopPropagation(); generateSinglePage(${i})" ${page.generating ? 'disabled' : ''}>${page.generating ? '生成中...' : '生成'}</button>
+          <button class="page-card-btn delete" onclick="event.stopPropagation(); deletePage(${i})">删除</button>
+        </div>
+      </div>
+      <div class="page-card-body">
+        <div style="font-size:12px;color:#666;margin-bottom:6px;font-weight:500;">选择本页包含的对话：</div>
+        <div class="dialogue-select-list">${dialogueChips}</div>
+        <div class="style-grid">
+          <div class="style-field full">
+            <label>🏠 本页场景</label>
+            <input type="text" value="${page.style.scene || ''}" placeholder="不填则用全局场景" onchange="updatePageStyle(${i}, 'scene', this.value)">
+          </div>
+          <div class="style-field">
+            <label>😀 A表情动作</label>
+            <input type="text" value="${page.style.actionA || ''}" placeholder="托腮/微笑/生气..." onchange="updatePageStyle(${i}, 'actionA', this.value)">
+          </div>
+          <div class="style-field">
+            <label>😀 B表情动作</label>
+            <input type="text" value="${page.style.actionB || ''}" placeholder="星星眼/委屈/兴奋..." onchange="updatePageStyle(${i}, 'actionB', this.value)">
+          </div>
+          <div class="style-field full">
+            <label>✨ 额外元素</label>
+            <input type="text" value="${page.style.extra || ''}" placeholder="加一只猫/桌上有咖啡..." onchange="updatePageStyle(${i}, 'extra', this.value)">
+          </div>
+        </div>
+        ${page.generating ? `
+        <div class="page-progress">
+          <div class="progress-bar"><div class="progress-fill" style="width:${page.progress}%"></div></div>
+          <div class="progress-text">${page.progressText} (${Math.round(page.progress)}%)</div>
+        </div>` : ''}
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function togglePageCard(index) {
+  currentPageIndex = index;
+  renderPageManager();
+  renderPageNav();
+  showPage(index);
+}
+
+// ============ 页码导航 ============
 function renderPageNav() {
   const nav = document.getElementById('pageNav');
   nav.innerHTML = '';
   pages.forEach((page, i) => {
     const tab = document.createElement('div');
-    tab.className = 'page-tab' + (i === currentPageIndex ? ' active' : '') + (page.generated ? ' generated' : '');
+    let cls = 'page-tab';
+    if (i === currentPageIndex) cls += ' active';
+    if (page.generated) cls += ' generated';
+    if (page.generating) cls += ' generating';
+    tab.className = cls;
     tab.textContent = `第 ${i + 1} 页`;
-    tab.onclick = () => { currentPageIndex = i; renderPageNav(); showPage(i); };
+    tab.onclick = () => { currentPageIndex = i; renderPageNav(); renderPageManager(); showPage(i); };
     nav.appendChild(tab);
   });
 }
@@ -392,49 +637,47 @@ function showPage(index) {
   const placeholder = document.getElementById('placeholder');
   const loading = document.getElementById('loading');
   const modifySection = document.getElementById('modifySection');
-  const downloadBtns = document.querySelectorAll('.download-btn');
+  const downloadBtn = document.getElementById('downloadCurrentBtn');
+  const bubblePanel = document.getElementById('bubbleAdjustPanel');
   
-  if (pages[index] && pages[index].characterImageUrl) {
+  const page = pages[index];
+  if (page && page.characterImageUrl) {
     renderCanvas(index);
     canvas.style.display = 'block';
     placeholder.style.display = 'none';
     loading.style.display = 'none';
     modifySection.classList.add('show');
-    downloadBtns.forEach(b => b.classList.add('show'));
+    downloadBtn.classList.add('show');
+    if (bubblePanel) bubblePanel.style.display = 'block';
+  } else if (page && page.generating) {
+    canvas.style.display = 'none';
+    placeholder.style.display = 'none';
+    loading.style.display = 'block';
+    document.getElementById('loadingText').textContent = page.progressText || '正在生成...';
+    modifySection.classList.remove('show');
+    downloadBtn.classList.remove('show');
+    if (bubblePanel) bubblePanel.style.display = 'none';
   } else {
     canvas.style.display = 'none';
     placeholder.style.display = 'block';
     loading.style.display = 'none';
     modifySection.classList.remove('show');
-    downloadBtns.forEach(b => b.classList.remove('show'));
+    downloadBtn.classList.remove('show');
+    if (bubblePanel) bubblePanel.style.display = 'none';
   }
 }
 
 // ============ 加载图片 ============
 async function loadImage(src) {
   if (characterImages[src]) return characterImages[src];
-  
-  // 远程图片用 fetch + blob 方式加载，绕过 CORS 限制
   if (src.startsWith('http://') || src.startsWith('https://')) {
-    try {
-      const response = await fetch(src);
-      if (!response.ok) throw new Error(`图片下载失败 (HTTP ${response.status})`);
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      const img = await new Promise((resolve, reject) => {
-        const image = new Image();
-        image.onload = () => resolve(image);
-        image.onerror = () => reject(new Error('图片解码失败'));
-        image.src = objectUrl;
-      });
-      characterImages[src] = img;
-      return img;
-    } catch (error) {
-      throw new Error(`远程图片加载失败: ${error.message}`);
-    }
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => { characterImages[src] = img; resolve(img); };
+      img.onerror = () => reject(new Error(`远程图片加载失败`));
+      img.src = src;
+    });
   }
-  
-  // 本地图片用普通方式加载
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => { characterImages[src] = img; resolve(img); };
@@ -445,58 +688,48 @@ async function loadImage(src) {
 
 // ============ 拼接参考图 ============
 async function createReferenceImage() {
+  const REF_W = 768;
+  const REF_H = 1024;
   const canvas = document.createElement('canvas');
-  canvas.width = CANVAS_W;
-  canvas.height = CANVAS_H;
+  canvas.width = REF_W;
+  canvas.height = REF_H;
   const ctx = canvas.getContext('2d');
   
   ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  ctx.fillRect(0, 0, REF_W, REF_H);
   
   const [imgA, imgB] = await Promise.all([
     loadImage(`assets/${selectedA}.png`),
     loadImage(`assets/${selectedB}.png`),
   ]);
   
-  const size = 800;
-  const y = 200;
-  ctx.drawImage(imgA, 120, y, size, size);
+  const size = 320;
+  const y = 80;
+  ctx.drawImage(imgA, 48, y, size, size);
   
   ctx.save();
-  ctx.translate(CANVAS_W - 120 - size, 0);
+  ctx.translate(REF_W - 48 - size, 0);
   ctx.scale(-1, 1);
   ctx.drawImage(imgB, 0, y, size, size);
   ctx.restore();
   
-  // 下方留空白给对话气泡
-  ctx.fillStyle = 'rgba(200, 200, 255, 0.05)';
-  ctx.fillRect(100, 1300, CANVAS_W - 200, CANVAS_H - 1400);
-  
-  return canvas.toDataURL('image/png');
+  return canvas.toDataURL('image/jpeg', 0.8);
 }
 
-// ============ 获取风格设定 ============
-function getStyleSettings() {
-  return {
-    overall: document.getElementById('styleOverall').value.trim(),
-    scene: document.getElementById('styleScene').value.trim(),
-    actionA: document.getElementById('styleActionA').value.trim(),
-    actionB: document.getElementById('styleActionB').value.trim(),
-    extra: document.getElementById('styleExtra').value.trim(),
-  };
-}
-
-// ============ 生成提示词（AI只生成角色和背景，不带气泡）============
-function generatePromptForPage(pageDialogues, pageIndex, totalPages, isFirstPage, style) {
+// ============ 生成提示词 ============
+function generatePromptForPage(page, pageIndex, totalPages, isFirstPage) {
   const typeA = MBTI_TYPES.find(t => t.code === selectedA);
   const typeB = MBTI_TYPES.find(t => t.code === selectedB);
+  const globalOverall = document.getElementById('globalOverall').value.trim();
+  const globalScene = document.getElementById('globalScene').value.trim();
+  const scene = page.style.scene || globalScene || '';
   
+  const pageDialogues = page.dialogueIds.map(id => allDialogues[id]).filter(d => d);
   const dialogueText = pageDialogues.map(d => {
     const name = d.speaker === 'a' ? typeA.name.split(' ')[0] : typeB.name.split(' ')[0];
     return `${name}: ${d.text}`;
   }).join('\n');
   
-  // 情绪判断
   const allText = pageDialogues.map(d => d.text).join('');
   let mood = '自然对话';
   if (/哈哈|开心|好呀|太棒|喜欢|哇|嘻嘻|好棒|太好了|走啦|吃|玩|耶|棒|爽|快乐|高兴|兴奋|赞|厉害|可爱|漂亮|帅|美|冲|加油|比心/.test(allText)) mood = '开心活泼';
@@ -505,21 +738,20 @@ function generatePromptForPage(pageDialogues, pageIndex, totalPages, isFirstPage
   else if (/喜欢|爱你|想你|抱抱|亲亲|宝贝|亲爱的/.test(allText)) mood = '甜蜜温馨';
   
   let stylePart = '';
-  if (style.overall) stylePart += `整体风格：${style.overall}。\n`;
-  if (style.scene) stylePart += `场景背景：${style.scene}。\n`;
-  if (style.extra) stylePart += `画面中添加：${style.extra}。\n`;
+  if (globalOverall) stylePart += `整体风格：${globalOverall}。\n`;
+  if (scene) stylePart += `场景背景：${scene}。\n`;
+  if (page.style.extra) stylePart += `画面中添加：${page.style.extra}。\n`;
   
   let actionPart = '';
-  if (style.actionA) actionPart += `${typeA.name}的表情和动作：${style.actionA}。\n`;
-  if (style.actionB) actionPart += `${typeB.name}的表情和动作：${style.actionB}。\n`;
+  if (page.style.actionA) actionPart += `${typeA.name}的表情和动作：${page.style.actionA}。\n`;
+  if (page.style.actionB) actionPart += `${typeB.name}的表情和动作：${page.style.actionB}。\n`;
   
   if (isFirstPage) {
-    // 第一页：正常生成
-    return `一张 MBTI 人格对话漫画的角色和背景图，16personalities 经典低多边形小人风格，3:4 竖版构图。
+    return `一张 MBTI 人格对话漫画，16personalities 经典低多边形小人风格，3:4 竖版构图。
 
 这是第 ${pageIndex + 1}/${totalPages} 页。
 
-左侧是 ${typeA.name}（${typeA.desc}），右侧是 ${typeB.name}（${typeB.desc}），两人面对面站立，位于画面上半部分。
+左侧是 ${typeA.name}（${typeA.desc}），右侧是 ${typeB.name}（${typeB.desc}），两人面对面站立。
 
 整体情绪：${mood}。
 
@@ -529,14 +761,14 @@ ${dialogueText}
 ${stylePart}${actionPart}
 具体要求：
 1. 保持两个角色的基本颜色、发型和低多边形风格
-2. 根据对话内容和情绪，调整角色的表情、手势和身体姿态
-3. 画面上半部分是两个角色，下半部分留空白（不要画任何东西，后续会添加对话气泡）
-4. 背景符合场景氛围，可以根据对话内容添加相关的场景元素
-5. 重要：画面中绝对不要出现任何对话气泡、文字或字幕
-6. 画面完整，角色清晰可见，上下左右不要留白过多`;
+2. 正常的人体结构，每个角色只有两只手，不要多余的肢体或手指
+3. 根据对话内容和情绪，调整角色的表情、手势和身体姿态
+4. 背景场景延伸整张图，上下左右都有背景，不要留空白区域
+5. 角色位于画面上半部分，下半部分也有背景场景
+6. 重要：画面中绝对不要出现任何对话气泡、文字或字幕
+7. 画面完整，角色清晰可见`;
   } else {
-    // 后续页：保持背景一致，只改角色
-    return `基于参考图修改这张 MBTI 人格对话漫画的角色和背景图。
+    return `基于参考图修改这张 MBTI 人格对话漫画。
 
 这是第 ${pageIndex + 1}/${totalPages} 页。
 
@@ -551,63 +783,157 @@ ${actionPart}
 重要要求：
 1. 严格保持参考图中的背景、场景、光照、颜色和整体氛围完全不变
 2. 只修改两个角色的表情、手势和身体姿态，使其符合本页对话内容和情绪
-3. 角色的位置、大小、基本颜色和发型保持不变
-4. 画面下半部分的空白区域保持不变（不要画任何东西）
+3. 正常的人体结构，每个角色只有两只手，不要多余的肢体或手指
+4. 角色的位置、大小、基本颜色和发型保持不变
 5. 绝对不要添加任何对话气泡、文字或字幕
 6. 除了角色的表情动作外，其他所有元素都必须与参考图完全一致`;
   }
 }
 
-// ============ 调用 Seedream 图生图 API ============
-async function callSeedreamImageEdit(referenceImage, prompt) {
-  const response = await fetch(SEEDREAM_API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getApiKey()}` },
-    body: JSON.stringify({ model: SEEDREAM_MODEL_ID, prompt: prompt, image: referenceImage, size: `${CANVAS_W}x${CANVAS_H}`, response_format: 'url' }),
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`API 错误 (${response.status}): ${text.substring(0, 300)}`);
+// ============ 调用 Seedream API ============
+async function callSeedreamImageEdit(referenceImage, prompt, onProgress) {
+  currentAbortController = new AbortController();
+  try {
+    if (onProgress) onProgress(20, '正在调用 AI 生成...');
+    const response = await fetch(SEEDREAM_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getApiKey()}` },
+      body: JSON.stringify({ model: SEEDREAM_MODEL_ID, prompt: prompt, image: referenceImage, size: `${CANVAS_W}x${CANVAS_H}`, response_format: 'url' }),
+      signal: currentAbortController.signal,
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`API 错误 (${response.status}): ${text.substring(0, 300)}`);
+    }
+    if (onProgress) onProgress(75, 'AI 生成完成，正在加载图片...');
+    const data = await response.json();
+    const imageUrl = data.data && data.data[0] && data.data[0].url;
+    if (!imageUrl) throw new Error('API 返回数据格式异常: ' + JSON.stringify(data).substring(0, 300));
+    return imageUrl;
+  } catch (error) {
+    if (error.name === 'AbortError') throw new Error('已停止生成');
+    throw error;
+  } finally {
+    currentAbortController = null;
   }
-  const data = await response.json();
-  const imageUrl = data.data && data.data[0] && data.data[0].url;
-  if (!imageUrl) throw new Error('API 返回数据格式异常: ' + JSON.stringify(data).substring(0, 300));
-  return imageUrl;
 }
 
 // ============ 生成单页 ============
-async function generatePage(pageIndex) {
+async function generateSinglePage(pageIndex) {
+  if (!getApiKey()) { alert('请先配置 API Key'); showApiKeyBanner(); return; }
   const page = pages[pageIndex];
-  if (!page) return;
+  if (!page || page.dialogueIds.length === 0) { alert('请先为这一页选择对话'); return; }
   
-  const style = getStyleSettings();
-  const isFirstPage = (pageIndex === 0);
+  shouldStop = false;
+  page.generating = true;
+  page.generated = false;
+  page.progress = 0;
+  page.progressText = '准备中...';
+  currentPageIndex = pageIndex;
   
-  let referenceImage;
-  if (isFirstPage) {
-    // 第一页：用原始小人素材拼接参考图
-    referenceImage = await createReferenceImage();
-  } else {
-    // 后续页：用第一页的生成结果作为参考，保持背景一致
-    if (!pages[0].characterImageUrl) {
-      // 如果第一页还没生成，先生成第一页
-      await generatePage(0);
+  renderPageManager();
+  renderPageNav();
+  showPage(pageIndex);
+  
+  try {
+    // 阶段1：拼接参考图
+    page.progress = 10;
+    page.progressText = '正在拼接参考图...';
+    renderPageManager();
+    showPage(pageIndex);
+    
+    let referenceImage;
+    const isFirstPage = (pageIndex === 0);
+    if (isFirstPage || !pages[0].characterImageUrl) {
+      referenceImage = await createReferenceImage();
+    } else {
+      referenceImage = pages[0].characterImageUrl;
     }
-    referenceImage = pages[0].characterImageUrl;
+    
+    if (shouldStop) throw new Error('已停止生成');
+    
+    // 阶段2：调用AI
+    const prompt = generatePromptForPage(page, pageIndex, pages.length, isFirstPage);
+    const imageUrl = await callSeedreamImageEdit(referenceImage, prompt, (p, t) => {
+      page.progress = p;
+      page.progressText = t;
+      renderPageManager();
+      showPage(pageIndex);
+    });
+    
+    if (shouldStop) throw new Error('已停止生成');
+    
+    // 阶段3：加载图片
+    page.progress = 85;
+    page.progressText = '正在加载生成的图片...';
+    renderPageManager();
+    showPage(pageIndex);
+    await loadImage(imageUrl);
+    
+    // 阶段4：合成
+    page.progress = 95;
+    page.progressText = '正在合成对话气泡...';
+    renderPageManager();
+    
+    page.characterImageUrl = imageUrl;
+    page.generated = true;
+    page.generating = false;
+    page.progress = 100;
+    page.progressText = '生成完成';
+    
+    await renderCanvas(pageIndex);
+    renderPageManager();
+    renderPageNav();
+    showPage(pageIndex);
+    showBubbleAdjustPanel();
+    
+  } catch (error) {
+    page.generating = false;
+    page.progress = 0;
+    page.progressText = '';
+    renderPageManager();
+    renderPageNav();
+    showPage(pageIndex);
+    if (error.message !== '已停止生成') {
+      alert(`第 ${pageIndex + 1} 页生成失败：${error.message}`);
+    }
   }
-  
-  const prompt = generatePromptForPage(page.dialogues, pageIndex, pages.length, isFirstPage, style);
-  console.log(`第 ${pageIndex + 1} 页提示词:`, prompt);
-  
-  const imageUrl = await callSeedreamImageEdit(referenceImage, prompt);
-  page.characterImageUrl = imageUrl;
-  page.generated = true;
-  
-  // 缓存图片
-  await loadImage(imageUrl);
 }
 
-// ============ Canvas 合成（角色图 + 对话气泡 + 文字）============
+// ============ 生成全部 ============
+async function generateAll() {
+  if (!getApiKey()) { alert('请先配置 API Key'); showApiKeyBanner(); return; }
+  
+  const stopBtn = document.getElementById('stopBtn');
+  const genBtn = document.getElementById('generateAllBtn');
+  shouldStop = false;
+  genBtn.disabled = true;
+  stopBtn.classList.add('show');
+  
+  for (let i = 0; i < pages.length; i++) {
+    if (shouldStop) break;
+    if (pages[i].dialogueIds.length === 0) continue;
+    await generateSinglePage(i);
+  }
+  
+  genBtn.disabled = false;
+  stopBtn.classList.remove('show');
+}
+
+// ============ 停止生成 ============
+function stopGeneration() {
+  shouldStop = true;
+  if (currentAbortController) currentAbortController.abort();
+  const stopBtn = document.getElementById('stopBtn');
+  stopBtn.textContent = '⏳ 正在停止...';
+  stopBtn.disabled = true;
+  setTimeout(() => {
+    stopBtn.textContent = '⏹ 停止生成';
+    stopBtn.disabled = false;
+  }, 1500);
+}
+
+// ============ Canvas 合成（背景全图延伸，气泡灵活布局）============
 async function renderCanvas(pageIndex) {
   const page = pages[pageIndex];
   if (!page || !page.characterImageUrl) return;
@@ -615,63 +941,59 @@ async function renderCanvas(pageIndex) {
   const canvas = document.getElementById('previewCanvas');
   const ctx = canvas.getContext('2d');
   
-  // 加载角色背景图
   const charImg = await loadImage(page.characterImageUrl);
-  
-  // 绘制角色背景图（覆盖整个画布）
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
   ctx.drawImage(charImg, 0, 0, CANVAS_W, CANVAS_H);
   
-  // 绘制对话气泡
-  const dialogues = page.dialogues;
-  const bubbleAreaTop = 1350;
-  const bubbleAreaBottom = CANVAS_H - 80;
-  const bubbleMaxWidth = 1300;
-  const paddingX = 100;
-  const gap = 24;
+  // 获取本页对话
+  const pageDialogues = page.dialogueIds.map(id => allDialogues[id]).filter(d => d && d.text.trim());
+  if (pageDialogues.length === 0) return;
+  
+  // 使用用户调整的气泡参数
+  const n = pageDialogues.length;
+  const baseFontSize = bubbleSettings.fontSize;
+  const fontSize = n >= 5 ? Math.max(baseFontSize - 8, 28) : baseFontSize;
+  const lineHeight = fontSize * 1.35;
+  
+  const bubbleAreaTop = CANVAS_H * (bubbleSettings.verticalPos / 100);
+  const bubbleAreaBottom = CANVAS_H * 0.96;
+  const bubbleAreaHeight = bubbleAreaBottom - bubbleAreaTop;
+  
+  const bubblePaddingX = 36;
+  const bubblePaddingY = 26;
+  const maxBubbleWidth = CANVAS_W * (bubbleSettings.maxWidth / 100);
+  const gap = 20;
   
   // 计算每个气泡的高度
-  const bubbles = dialogues.map((d, i) => {
+  const bubbles = pageDialogues.map(d => {
     const isA = d.speaker === 'a';
-    const text = d.text;
-    const fontSize = 42;
-    const lineHeight = 58;
-    const bubblePaddingX = 36;
-    const bubblePaddingY = 28;
-    
-    // 文字换行
-    const lines = wrapText(ctx, text, bubbleMaxWidth - bubblePaddingX * 2, fontSize);
+    const lines = wrapText(ctx, d.text, maxBubbleWidth - bubblePaddingX * 2, fontSize);
     const textHeight = lines.length * lineHeight;
-    const bubbleHeight = textHeight + bubblePaddingY * 2 + 20; // +20 for triangle
-    
-    return { isA, text, lines, fontSize, lineHeight, bubblePaddingX, bubblePaddingY, bubbleHeight };
+    const bubbleHeight = textHeight + bubblePaddingY * 2 + 18;
+    return { isA, text: d.text, lines, fontSize, lineHeight, bubblePaddingX, bubblePaddingY, bubbleHeight, opacity: bubbleSettings.opacity };
   });
   
-  // 计算总高度
   const totalHeight = bubbles.reduce((sum, b) => sum + b.bubbleHeight, 0) + (bubbles.length - 1) * gap;
   
   // 垂直居中
-  let currentY = bubbleAreaTop + (bubbleAreaBottom - bubbleAreaTop - totalHeight) / 2;
+  let currentY = bubbleAreaTop + (bubbleAreaHeight - totalHeight) / 2;
   if (currentY < bubbleAreaTop) currentY = bubbleAreaTop;
   
   // 绘制每个气泡
   bubbles.forEach(bubble => {
-    drawBubble(ctx, bubble, paddingX, currentY, bubbleMaxWidth);
+    drawBubbleFlexible(ctx, bubble, currentY, maxBubbleWidth);
     currentY += bubble.bubbleHeight + gap;
   });
 }
 
-// ============ 文字换行 ============
 function wrapText(ctx, text, maxWidth, fontSize) {
   ctx.font = `${fontSize}px -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif`;
   const lines = [];
   let currentLine = '';
-  
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
     const testLine = currentLine + char;
-    const metrics = ctx.measureText(testLine);
-    if (metrics.width > maxWidth && currentLine !== '') {
+    if (ctx.measureText(testLine).width > maxWidth && currentLine !== '') {
       lines.push(currentLine);
       currentLine = char;
     } else {
@@ -679,49 +1001,38 @@ function wrapText(ctx, text, maxWidth, fontSize) {
     }
   }
   if (currentLine) lines.push(currentLine);
-  
   return lines;
 }
 
-// ============ 绘制对话气泡 ============
-function drawBubble(ctx, bubble, paddingX, y, maxWidth) {
+function drawBubbleFlexible(ctx, bubble, y, maxWidth) {
   const { isA, lines, fontSize, lineHeight, bubblePaddingX, bubblePaddingY, bubbleHeight } = bubble;
   
-  const radius = 28;
-  const triangleSize = 20;
+  const radius = 24;
+  const triangleSize = 18;
   
-  // 计算气泡宽度（根据文字内容）
   ctx.font = `${fontSize}px -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif`;
   let textWidth = 0;
-  lines.forEach(line => {
-    const w = ctx.measureText(line).width;
-    if (w > textWidth) textWidth = w;
-  });
+  lines.forEach(line => { const w = ctx.measureText(line).width; if (w > textWidth) textWidth = w; });
   const bubbleWidth = Math.min(textWidth + bubblePaddingX * 2, maxWidth);
   
-  // 气泡位置
   let x;
-  if (isA) {
-    x = paddingX; // 左侧
-  } else {
-    x = CANVAS_W - paddingX - bubbleWidth; // 右侧
-  }
+  if (isA) x = 80;
+  else x = CANVAS_W - 80 - bubbleWidth;
   
   const bubbleTop = y + triangleSize;
   const bubbleBottom = y + bubbleHeight;
   
-  // 绘制阴影
+  // 半透明白色背景
+  const opacity = bubble.opacity || 0.95;
   ctx.save();
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
-  ctx.shadowBlur = 12;
-  ctx.shadowOffsetY = 4;
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+  ctx.shadowBlur = 20;
+  ctx.shadowOffsetY = 6;
   
-  // 气泡背景
-  ctx.fillStyle = isA ? '#ffffff' : '#ffffff';
-  ctx.strokeStyle = isA ? '#e0e0e0' : '#e0e0e0';
+  ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+  ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(opacity + 0.05, 1)})`;
   ctx.lineWidth = 2;
   
-  // 圆角矩形
   ctx.beginPath();
   ctx.moveTo(x + radius, bubbleTop);
   ctx.lineTo(x + bubbleWidth - radius, bubbleTop);
@@ -737,212 +1048,84 @@ function drawBubble(ctx, bubble, paddingX, y, maxWidth) {
   ctx.stroke();
   ctx.restore();
   
-  // 绘制三角（指向说话人）
+  // 三角
   ctx.save();
-  ctx.fillStyle = '#ffffff';
-  ctx.strokeStyle = '#e0e0e0';
-  ctx.lineWidth = 2;
-  
+  ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
   const triangleY = bubbleTop + 20;
   ctx.beginPath();
   if (isA) {
-    // 左侧气泡，三角指向左
     ctx.moveTo(x, triangleY);
     ctx.lineTo(x - triangleSize, triangleY + triangleSize / 2);
     ctx.lineTo(x, triangleY + triangleSize);
   } else {
-    // 右侧气泡，三角指向右
     ctx.moveTo(x + bubbleWidth, triangleY);
     ctx.lineTo(x + bubbleWidth + triangleSize, triangleY + triangleSize / 2);
     ctx.lineTo(x + bubbleWidth, triangleY + triangleSize);
   }
   ctx.closePath();
   ctx.fill();
-  ctx.stroke();
   ctx.restore();
   
-  // 绘制文字
-  ctx.fillStyle = '#333333';
+  // 文字
+  ctx.fillStyle = '#222';
   ctx.font = `${fontSize}px -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif`;
   ctx.textBaseline = 'top';
-  
   const textX = x + bubblePaddingX;
   let textY = bubbleTop + bubblePaddingY;
-  
   lines.forEach(line => {
     ctx.fillText(line, textX, textY);
     textY += lineHeight;
   });
 }
 
-// ============ 生成当前页 ============
-async function generateCurrentPage() {
-  if (!getApiKey()) { alert('请先在页面顶部配置 API Key'); showApiKeyBanner(); return; }
-  if (dialogues.every(d => !d.text.trim())) { alert('请输入对话内容'); return; }
-  updatePagination();
-  
-  const btn = document.getElementById('generateCurrentBtn');
-  const stopBtn = document.getElementById('stopBtn');
-  const loading = document.getElementById('loading');
-  const loadingText = document.getElementById('loadingText');
-  const placeholder = document.getElementById('placeholder');
-  const canvas = document.getElementById('previewCanvas');
-  
-  shouldStop = false;
-  btn.disabled = true;
-  stopBtn.classList.add('show');
-  placeholder.style.display = 'none';
-  canvas.style.display = 'none';
-  loading.style.display = 'block';
-  loadingText.textContent = `正在生成第 ${currentPageIndex + 1}/${pages.length} 页...`;
-  
-  try {
-    await generatePage(currentPageIndex);
-    if (shouldStop) throw new Error('已停止生成');
-    renderPageNav();
-    await renderCanvas(currentPageIndex);
-    showPage(currentPageIndex);
-  } catch (error) {
-    console.error('生成失败:', error);
-    loading.style.display = 'none';
-    if (error.message === '已停止生成') {
-      placeholder.style.display = 'block';
-      placeholder.querySelector('.text').innerHTML = `已停止生成<br><br>已生成的页面可以在上方页码切换查看`;
-    } else {
-      placeholder.style.display = 'block';
-      placeholder.querySelector('.text').innerHTML = `生成失败：${error.message}<br><br>请重试`;
-    }
-  } finally {
-    btn.disabled = false;
-    stopBtn.classList.remove('show');
-  }
-}
-
-// ============ 生成全部 ============
-async function generateAll() {
-  if (!getApiKey()) { alert('请先在页面顶部配置 API Key'); showApiKeyBanner(); return; }
-  if (dialogues.every(d => !d.text.trim())) { alert('请输入对话内容'); return; }
-  updatePagination();
-  
-  const btn = document.getElementById('generateAllBtn');
-  const btn2 = document.getElementById('generateCurrentBtn');
-  const stopBtn = document.getElementById('stopBtn');
-  const loading = document.getElementById('loading');
-  const loadingText = document.getElementById('loadingText');
-  const progressFill = document.getElementById('progressFill');
-  const placeholder = document.getElementById('placeholder');
-  const canvas = document.getElementById('previewCanvas');
-  
-  shouldStop = false;
-  btn.disabled = true;
-  btn2.disabled = true;
-  stopBtn.classList.add('show');
-  placeholder.style.display = 'none';
-  canvas.style.display = 'none';
-  loading.style.display = 'block';
-  
-  let stopped = false;
-  let lastGeneratedPage = -1;
-  
-  for (let i = 0; i < pages.length; i++) {
-    if (shouldStop) { stopped = true; break; }
-    
-    currentPageIndex = i;
-    renderPageNav();
-    const progress = (i / pages.length) * 100;
-    progressFill.style.width = progress + '%';
-    loadingText.textContent = `正在生成第 ${i + 1}/${pages.length} 页...`;
-    
-    try {
-      await generatePage(i);
-      lastGeneratedPage = i;
-    } catch (error) {
-      console.error(`第 ${i + 1} 页生成失败:`, error);
-      if (error.message === '已停止生成') {
-        stopped = true;
-        break;
-      }
-      alert(`第 ${i + 1} 页生成失败：${error.message}`);
-      break;
-    }
-  }
-  
-  if (stopped) {
-    progressFill.style.width = ((lastGeneratedPage + 1) / pages.length * 100) + '%';
-    loadingText.textContent = `已停止生成（已完成 ${lastGeneratedPage + 1}/${pages.length} 页）`;
-  } else {
-    progressFill.style.width = '100%';
-    loadingText.textContent = '全部生成完成！';
-  }
-  setTimeout(() => { loading.style.display = 'none'; }, 1500);
-  
-  // 跳转到最后生成的页面（或第一页）
-  currentPageIndex = lastGeneratedPage >= 0 ? lastGeneratedPage : 0;
-  renderPageNav();
-  if (pages[currentPageIndex] && pages[currentPageIndex].characterImageUrl) {
-    await renderCanvas(currentPageIndex);
-  }
-  showPage(currentPageIndex);
-  btn.disabled = false;
-  btn2.disabled = false;
-  stopBtn.classList.remove('show');
-}
-
-// ============ 停止生成 ============
-function stopGeneration() {
-  shouldStop = true;
-  const stopBtn = document.getElementById('stopBtn');
-  stopBtn.textContent = '⏳ 正在停止...';
-  stopBtn.disabled = true;
-  setTimeout(() => {
-    stopBtn.textContent = '⏹ 停止生成';
-    stopBtn.disabled = false;
-  }, 2000);
-}
-
 // ============ 修改当前页 ============
 async function modifyCurrentPage() {
   const modifyInstruction = document.getElementById('modifyInput').value.trim();
   if (!modifyInstruction) { alert('请输入修改指令'); return; }
-  
   const page = pages[currentPageIndex];
   if (!page || !page.characterImageUrl) { alert('当前页还没有生成图片'); return; }
   
   const btn = document.getElementById('modifyBtn');
-  const loading = document.getElementById('loading');
-  const loadingText = document.getElementById('loadingText');
-  const canvas = document.getElementById('previewCanvas');
-  
   btn.disabled = true;
-  canvas.style.display = 'none';
-  loading.style.display = 'block';
-  loadingText.textContent = '正在基于当前图修改...';
   
   try {
     const typeA = MBTI_TYPES.find(t => t.code === selectedA);
     const typeB = MBTI_TYPES.find(t => t.code === selectedB);
-    
-    const prompt = `基于这张 MBTI 人格对话漫画的角色和背景图进行修改。
+    const prompt = `基于这张 MBTI 人格对话漫画进行修改。
 
 修改要求：${modifyInstruction}
 
 保持要求：
 1. 保持 ${typeA.name} 和 ${typeB.name} 两个角色的基本形象、颜色和低多边形风格不变
-2. 保持背景、场景、光照和整体氛围不变
-3. 画面下半部分的空白区域保持不变（不要画任何东西）
+2. 正常的人体结构，每个角色只有两只手
+3. 保持背景、场景、光照和整体氛围不变
 4. 绝对不要添加任何对话气泡、文字或字幕
 5. 只修改用户指定的部分，不要改变其他元素`;
     
-    const newImageUrl = await callSeedreamImageEdit(page.characterImageUrl, prompt);
+    page.generating = true;
+    renderPageManager();
+    showPage(currentPageIndex);
+    
+    const newImageUrl = await callSeedreamImageEdit(page.characterImageUrl, prompt, (p, t) => {
+      page.progress = p;
+      page.progressText = t;
+      renderPageManager();
+      showPage(currentPageIndex);
+    });
+    
+    delete characterImages[page.characterImageUrl];
     page.characterImageUrl = newImageUrl;
-    // 清除缓存
-    delete characterImages[newImageUrl];
+    page.generating = false;
+    await loadImage(newImageUrl);
     await renderCanvas(currentPageIndex);
+    renderPageManager();
+    renderPageNav();
     showPage(currentPageIndex);
     document.getElementById('modifyInput').value = '';
+    
   } catch (error) {
-    console.error('修改失败:', error);
-    loading.style.display = 'none';
+    page.generating = false;
+    renderPageManager();
     showPage(currentPageIndex);
     alert(`修改失败：${error.message}`);
   } finally {
@@ -950,39 +1133,287 @@ async function modifyCurrentPage() {
   }
 }
 
+// ============ 气泡调整 ============
+function updateBubbleSetting(key, value) {
+  const val = parseFloat(value);
+  bubbleSettings[key] = val;
+  
+  // 更新显示值
+  const valMap = {
+    fontSize: 'fontSizeVal',
+    maxWidth: 'maxWidthVal',
+    verticalPos: 'verticalPosVal',
+    opacity: 'opacityVal'
+  };
+  if (valMap[key]) {
+    const el = document.getElementById(valMap[key]);
+    if (el) {
+      if (key === 'opacity') el.textContent = Math.round(val * 100) + '%';
+      else if (key === 'fontSize') el.textContent = val + 'px';
+      else el.textContent = val + '%';
+    }
+  }
+  
+  // 实时重渲染
+  if (pages[currentPageIndex] && pages[currentPageIndex].characterImageUrl) {
+    renderCanvas(currentPageIndex);
+  }
+}
+
+function resetBubbleSettings() {
+  bubbleSettings = { fontSize: 52, maxWidth: 75, verticalPos: 56, opacity: 0.95 };
+  // 重置滑块
+  document.querySelector('input[oninput*="fontSize"]').value = 52;
+  document.querySelector('input[oninput*="maxWidth"]').value = 75;
+  document.querySelector('input[oninput*="verticalPos"]').value = 56;
+  document.querySelector('input[oninput*="opacity"]').value = 95;
+  // 更新显示
+  document.getElementById('fontSizeVal').textContent = '52px';
+  document.getElementById('maxWidthVal').textContent = '75%';
+  document.getElementById('verticalPosVal').textContent = '56%';
+  document.getElementById('opacityVal').textContent = '95%';
+  // 重渲染
+  if (pages[currentPageIndex] && pages[currentPageIndex].characterImageUrl) {
+    renderCanvas(currentPageIndex);
+  }
+}
+
+function showBubbleAdjustPanel() {
+  const panel = document.getElementById('bubbleAdjustPanel');
+  if (panel) panel.style.display = 'block';
+}
+
 // ============ 下载 ============
 function downloadCurrentPage() {
   const canvas = document.getElementById('previewCanvas');
-  const link = document.createElement('a');
-  link.download = `MBTI对话图_第${currentPageIndex + 1}页.png`;
-  link.href = canvas.toDataURL('image/png');
-  link.click();
+  try {
+    const link = document.createElement('a');
+    link.download = `MBTI对话图_第${currentPageIndex + 1}页.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch (error) {
+    const page = pages[currentPageIndex];
+    if (page && page.characterImageUrl) {
+      alert('由于跨域限制，无法直接下载合成图。\n\n将打开原始图片，你可以右键保存。');
+      window.open(page.characterImageUrl, '_blank');
+    }
+  }
 }
 
-function downloadAllPages() {
-  pages.forEach(async (page, i) => {
-    if (page.characterImageUrl) {
-      // 临时切换到该页渲染 Canvas
-      const savedIndex = currentPageIndex;
-      currentPageIndex = i;
-      await renderCanvas(i);
-      const canvas = document.getElementById('previewCanvas');
-      const link = document.createElement('a');
-      link.download = `MBTI对话图_第${i + 1}页.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      currentPageIndex = savedIndex;
-      await new Promise(r => setTimeout(r, 500));
+// ============ AI 辅助切页和设定 ============
+async function aiAssist() {
+  if (allDialogues.length === 0) { alert('请先输入对话内容'); return; }
+  
+  const btn = document.getElementById('aiAssistBtn');
+  btn.disabled = true;
+  btn.textContent = '🤖 AI 正在分析对话...';
+  
+  try {
+    // 简单规则引擎：按情绪和话题自动切页
+    const newPages = [];
+    let currentPageDialogues = [];
+    let lastMood = '';
+    
+    for (let i = 0; i < allDialogues.length; i++) {
+      const d = allDialogues[i];
+      const text = d.text;
+      
+      // 判断情绪
+      let mood = 'neutral';
+      if (/哈哈|开心|好呀|太棒|喜欢|哇|嘻嘻|好棒|太好了|走啦|吃|玩|耶|棒|爽|快乐|高兴|兴奋/.test(text)) mood = 'happy';
+      else if (/为什么|怎么|？|思考|想想|考虑|计划|安排|分析/.test(text)) mood = 'thinking';
+      else if (/生气|烦|讨厌|滚|闭嘴|无语|无奈|唉|哎|算了|随便/.test(text)) mood = 'angry';
+      
+      // 情绪变化或已有3条时切页
+      if (currentPageDialogues.length >= 3 || (lastMood && mood !== lastMood && currentPageDialogues.length >= 2)) {
+        newPages.push(createPageWithSettings(currentPageDialogues, lastMood));
+        currentPageDialogues = [];
+      }
+      currentPageDialogues.push(i);
+      lastMood = mood;
     }
-  });
+    if (currentPageDialogues.length > 0) {
+      newPages.push(createPageWithSettings(currentPageDialogues, lastMood));
+    }
+    
+    pages = newPages;
+    currentPageIndex = 0;
+    renderPageManager();
+    renderPageNav();
+    showPage(0);
+    
+    alert(`AI 辅助完成！\n\n已自动分为 ${pages.length} 页，并为每页设定了画面风格。\n你可以点击每页展开查看和修改，然后点击生成。`);
+    
+  } catch (error) {
+    alert(`AI 辅助失败：${error.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🤖 AI 辅助切页和设定画面';
+  }
+}
+
+function createPageWithSettings(dialogueIds, mood) {
+  let scene = '';
+  let actionA = '';
+  let actionB = '';
+  let extra = '';
+  
+  // 根据所有对话内容判断场景
+  const allText = dialogueIds.map(id => allDialogues[id].text).join('');
+  if (/火锅|吃|饭|餐厅|美食/.test(allText)) { scene = '火锅店或餐厅'; extra = '桌上有火锅和美食'; }
+  else if (/咖啡|咖啡馆|下午茶/.test(allText)) { scene = '咖啡馆'; extra = '桌上有咖啡杯'; }
+  else if (/公司|上班|工作|办公室|会议/.test(allText)) { scene = '办公室'; }
+  else if (/家|家里|客厅|沙发|电视/.test(allText)) { scene = '家里客厅'; extra = '有沙发和茶几'; }
+  else if (/公园|户外|散步|天气|花/.test(allText)) { scene = '户外公园'; }
+  
+  // 根据情绪设定表情动作
+  if (mood === 'happy') {
+    actionA = '微笑或开心';
+    actionB = '兴奋或手舞足蹈';
+  } else if (mood === 'thinking') {
+    actionA = '托腮思考或扶眼镜';
+    actionB = '认真倾听或歪头思考';
+  } else if (mood === 'angry') {
+    actionA = '无奈扶额或皱眉';
+    actionB = '委屈或生气';
+  }
+  
+  return {
+    id: Date.now() + Math.random(),
+    dialogueIds: [...dialogueIds],
+    style: { scene, actionA, actionB, extra },
+    characterImageUrl: null,
+    generated: false,
+    generating: false,
+    progress: 0,
+    progressText: ''
+  };
+}
+
+// ============ 保存与历史记录 ============
+function getHistory() {
+  try {
+    const data = localStorage.getItem(HISTORY_STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (e) { return []; }
+}
+
+function saveHistory(history) {
+  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+}
+
+function saveCurrentSettings() {
+  let name = '';
+  if (allDialogues.length > 0) {
+    name = allDialogues.slice(0, 2).map(d => d.text).join(' / ');
+    if (name.length > 40) name = name.substring(0, 40) + '...';
+  }
+  if (!name) name = '未命名对话';
+  
+  const finalName = prompt('给这条记录起个名字：', name);
+  if (finalName === null) return;
+  
+  const record = {
+    id: Date.now().toString(),
+    name: finalName || name,
+    createdAt: new Date().toLocaleString('zh-CN'),
+    selectedA, selectedB,
+    allDialogues: JSON.parse(JSON.stringify(allDialogues)),
+    globalOverall: document.getElementById('globalOverall').value,
+    globalScene: document.getElementById('globalScene').value,
+    pages: JSON.parse(JSON.stringify(pages.map(p => ({ ...p, characterImageUrl: null, generated: false, generating: false }))))
+  };
+  
+  const history = getHistory();
+  history.unshift(record);
+  if (history.length > 50) history.length = 50;
+  saveHistory(history);
+  renderHistoryList();
+  alert('保存成功！');
+}
+
+function loadHistoryItem(id) {
+  const history = getHistory();
+  const record = history.find(r => r.id === id);
+  if (!record) { alert('记录不存在'); return; }
+  
+  selectedA = record.selectedA;
+  selectedB = record.selectedB;
+  allDialogues = JSON.parse(JSON.stringify(record.allDialogues));
+  document.getElementById('globalOverall').value = record.globalOverall || '';
+  document.getElementById('globalScene').value = record.globalScene || '';
+  pages = JSON.parse(JSON.stringify(record.pages || []));
+  if (pages.length === 0) createDefaultPages();
+  currentPageIndex = 0;
+  
+  initMbtiGrid('mbtiGridA', selectedA, selectA);
+  initMbtiGrid('mbtiGridB', selectedB, selectB);
+  renderDialogues();
+  renderPageManager();
+  renderPageNav();
+  showPage(0);
+  
+  alert(`已加载记录：${record.name}`);
+}
+
+function deleteHistoryItem(id) {
+  if (!confirm('确定要删除这条记录吗？')) return;
+  const history = getHistory().filter(r => r.id !== id);
+  saveHistory(history);
+  renderHistoryList();
+}
+
+function renderHistoryList() {
+  const container = document.getElementById('historyList');
+  const history = getHistory();
+  if (history.length === 0) {
+    container.innerHTML = '<p class="hint" style="text-align:center;margin:10px 0;">暂无保存的记录</p>';
+    return;
+  }
+  container.innerHTML = history.map(record => `
+    <div class="history-item">
+      <div class="history-info" onclick="loadHistoryItem('${record.id}')">
+        <div class="history-name">${escapeHtml(record.name)}</div>
+        <div class="history-meta">${record.createdAt} · ${record.selectedA.toUpperCase()} × ${record.selectedB.toUpperCase()} · ${record.allDialogues.length}条对话</div>
+      </div>
+      <div class="history-actions">
+        <button class="history-load-btn" onclick="loadHistoryItem('${record.id}')">加载</button>
+        <button class="history-delete-btn" onclick="deleteHistoryItem('${record.id}')">删除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// ============ 清除所有设置 ============
+function clearAllSettings() {
+  if (!confirm('确定要清除所有设置吗？（对话内容、页面设置、风格设定都会被清空）')) return;
+  allDialogues = [{ speaker: 'a', text: '' }, { speaker: 'b', text: '' }];
+  document.getElementById('globalOverall').value = '';
+  document.getElementById('globalScene').value = '';
+  createDefaultPages();
+  currentPageIndex = 0;
+  characterImages = {};
+  renderDialogues();
+  renderPageManager();
+  renderPageNav();
+  showPage(0);
 }
 
 // ============ 初始化 ============
 initMbtiGrid('mbtiGridA', selectedA, selectA);
 initMbtiGrid('mbtiGridB', selectedB, selectB);
 renderDialogues();
-updatePagination();
+createDefaultPages();
+renderPageManager();
+renderPageNav();
 showApiKeyBanner();
+renderHistoryList();
 </script>
 </body>
 </html>
