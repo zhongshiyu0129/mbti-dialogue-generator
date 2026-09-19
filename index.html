@@ -45,11 +45,13 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
 .dialogue-text:focus { outline: none; border-color: #7c4dff; box-shadow: 0 0 0 2px rgba(124, 77, 255, 0.1); }
 .delete-btn { flex: 0 0 28px; height: 34px; border: none; background: #ffebee; color: #e53935; border-radius: 7px; cursor: pointer; font-size: 14px; }
 .delete-btn:hover { background: #ffcdd2; }
-.split-btn { flex: 0 0 28px; height: 34px; border: none; background: #e3f2fd; color: #1976d2; border-radius: 7px; cursor: pointer; font-size: 14px; font-weight: 700; }
+.split-btn { flex: 0 0 48px; height: 34px; border: none; background: #e3f2fd; color: #1976d2; border-radius: 7px; cursor: pointer; font-size: 14px; font-weight: 700; }
 .split-btn:hover { background: #bbdefb; }
 .page-divider { text-align: center; padding: 6px 0; position: relative; }
-.page-divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: dashed #ccc; }
+.page-divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: #90caf9; }
 .page-divider span { background: #fff; padding: 0 10px; position: relative; font-size: 10px; color: #999; }
+.merge-btn { margin-left: 10px; padding: 2px 8px; border: 1px solid #1976d2; background: #fff; color: #1976d2; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 500; }
+.merge-btn:hover { background: #e3f2fd; }
 .add-btn { width: 100%; padding: 8px; border: 2px dashed #ccc; background: #fafafa; border-radius: 7px; cursor: pointer; font-size: 13px; color: #666; }
 .add-btn:hover { border-color: #7c4dff; color: #7c4dff; background: #f3e5f5; }
 
@@ -198,6 +200,14 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
       <input type="password" id="apiKeyInput" placeholder="ark-xxxxxxxxxxxxxxxx" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;">
       <button onclick="saveApiKeyFromInput()" style="padding: 10px 20px; background: #ffc107; color: #000; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">保存 Key</button>
     </div>
+    <details style="max-width: 500px; margin: 10px auto 0; text-align: left;">
+      <summary style="cursor: pointer; color: #856404; font-size: 12px;">高级设置（AI分镜用的语言模型，默认已填，一般不用改）</summary>
+      <div style="display: flex; gap: 8px; margin-top: 8px;">
+        <input type="text" id="chatModelInput" placeholder="doubao-seed-2-0-mini-260428" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px;">
+        <button onclick="saveChatModelFromInput()" style="padding: 8px 14px; background: #e0a800; color: #000; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">保存</button>
+      </div>
+      <p style="margin: 6px 0 0; color: #856404; font-size: 11px;">AI 智能分镜需要开通豆包语言模型 Doubao-Seed-2.0（与画图模型分开开通）。</p>
+    </details>
   </div>
   
   <h1>MBTI 对话图生成器 v4</h1>
@@ -328,8 +338,43 @@ const API_KEY_STORAGE_KEY = 'mbti_dialogue_api_key';
 const HISTORY_STORAGE_KEY = 'mbti_dialogue_history_v4';
 const SEEDREAM_MODEL_ID = 'doubao-seedream-4-5-251128';
 const SEEDREAM_API_URL = 'https://ark.cn-beijing.volces.com/api/v3/images/generations';
+const CHAT_API_URL = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
+const CHAT_MODEL_STORAGE_KEY = 'mbti_dialogue_chat_model';
+const DEFAULT_CHAT_MODEL = 'doubao-seed-2-0-mini-260428';
 const CANVAS_W = 1920;
 const CANVAS_H = 2560;
+
+function getChatModel() {
+  const saved = localStorage.getItem(CHAT_MODEL_STORAGE_KEY);
+  return (saved && saved.trim()) ? saved.trim() : DEFAULT_CHAT_MODEL;
+}
+
+// 调用豆包语言模型（用于AI通读对话、智能分页、写分镜提示词）
+async function callDoubaoChat(systemPrompt, userPrompt) {
+  const response = await fetch(CHAT_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getApiKey()}` },
+    body: JSON.stringify({
+      model: getChatModel(),
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.8,
+      response_format: { type: 'json_object' }
+    })
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    let hint = '';
+    if (text.includes('NotFound') || text.includes('does not exist') || text.includes('access')) {
+      hint = '\n\n看起来还没有开通豆包语言模型（画图用的图像模型不能用来读对话）。请在火山方舟控制台开通 Doubao-Seed-2.0 文本模型后再试。';
+    }
+    throw new Error(`语言模型调用失败 (${response.status}): ${text.substring(0, 200)}${hint}`);
+  }
+  const data = await response.json();
+  return data.choices[0].message.content;
+}
 
 // ============ API Key 管理 ============
 function getApiKey() {
@@ -355,25 +400,32 @@ function saveApiKeyFromInput() {
   showApiKeyBanner();
   alert('API Key 已保存！');
 }
+function saveChatModelFromInput() {
+  const input = document.getElementById('chatModelInput');
+  const v = input.value.trim();
+  if (v) localStorage.setItem(CHAT_MODEL_STORAGE_KEY, v);
+  else localStorage.removeItem(CHAT_MODEL_STORAGE_KEY);
+  alert('语言模型已保存：' + getChatModel());
+}
 
 // ============ MBTI 数据 ============
 const MBTI_TYPES = [
-  { code: 'intj', name: 'INTJ 建筑师', group: 'NT', desc: '紫老头，冷静理性，托腮思考' },
-  { code: 'intp', name: 'INTP 逻辑学家', group: 'NT', desc: '药水姐，白大褂，拿着试管' },
-  { code: 'entj', name: 'ENTJ 指挥官', group: 'NT', desc: '大姐头，拿着教鞭，气场强大' },
-  { code: 'entp', name: 'ENTP 辩论家', group: 'NT', desc: '骨折眉，手势夸张，正在演讲' },
-  { code: 'infj', name: 'INFJ 提倡者', group: 'NF', desc: '绿老头，拿着法杖，温和深邃' },
-  { code: 'infp', name: 'INFP 调停者', group: 'NF', desc: '小蝴蝶，拿着风车，忧郁文艺' },
-  { code: 'enfj', name: 'ENFJ 主人公', group: 'NF', desc: '宝剑哥，拿着宝剑，热情洋溢' },
-  { code: 'enfp', name: 'ENFP 竞选者', group: 'NF', desc: '快乐小狗，背着背包，活泼开朗' },
-  { code: 'istj', name: 'ISTJ 物流师', group: 'SJ', desc: '蓝老头，戴着眼镜，拿着笔' },
-  { code: 'isfj', name: 'ISFJ 守卫者', group: 'SJ', desc: '小护士，温柔体贴' },
-  { code: 'estj', name: 'ESTJ 总经理', group: 'SJ', desc: '尺子姐，拿着尺子，严格认真' },
-  { code: 'esfj', name: 'ESFJ 执政官', group: 'SJ', desc: '伞哥，穿着围裙，拿着蛋糕' },
-  { code: 'istp', name: 'ISTP 鉴赏家', group: 'SP', desc: '电钻哥，拿着电钻和扳手' },
-  { code: 'isfp', name: 'ISFP 探险家', group: 'SP', desc: '小画家，拿着调色板，安静文艺' },
-  { code: 'estp', name: 'ESTP 企业家', group: 'SP', desc: '墨镜哥，戴着墨镜，背着SPORT包' },
-  { code: 'esfp', name: 'ESFP 表演者', group: 'SP', desc: '沙锤姐，拿着沙锤，正在跳舞' },
+  { code: 'intj', name: 'INTJ 建筑师', group: 'NT', desc: '紫老头，冷静理性，托腮思考', visual: '紫色系低多边形小人，棱角分明的紫色短发，穿紫色高领上衣和深色外套，表情冷静沉稳，单手托腮思考的姿态' },
+  { code: 'intp', name: 'INTP 逻辑学家', group: 'NT', desc: '药水姐，白大褂，拿着试管', visual: '浅紫色系低多边形小人，凌乱的短发，穿白色实验大褂，手里拿着装着彩色液体的试管，表情好奇而迷糊' },
+  { code: 'entj', name: 'ENTJ 指挥官', group: 'NT', desc: '大姐头，拿着教鞭，气场强大', visual: '深紫红色系低多边形小人，利落的金色短发盘起，穿酒红色西装，手持一根教鞭，气场强大自信，叉腰指挥的姿态' },
+  { code: 'entp', name: 'ENTP 辩论家', group: 'NT', desc: '骨折眉，手势夸张，正在演讲', visual: '紫色系低多边形小人，翘起的深紫色头发，穿紫色外套，手势夸张地张开双臂，表情狡黠兴奋，正在滔滔不绝地演讲' },
+  { code: 'infj', name: 'INFJ 提倡者', group: 'NF', desc: '绿老头，拿着法杖，温和深邃', visual: '深绿色系低多边形小人，柔顺的深绿色中长发，穿墨绿色长袍，手持一根木质法杖，表情温和深邃，安静地微笑' },
+  { code: 'infp', name: 'INFP 调停者', group: 'NF', desc: '小蝴蝶，拿着风车，忧郁文艺', visual: '浅绿色系低多边形小人，柔软的浅棕色短发，穿浅绿和白色搭配的衣服，手里拿着彩色小风车，表情梦幻忧郁，眼神飘向远方' },
+  { code: 'enfj', name: 'ENFJ 主人公', group: 'NF', desc: '宝剑哥，拿着宝剑，热情洋溢', visual: '绿色系低多边形小人，整齐的深棕色短发，穿翠绿色上衣，手持一把银色长剑，表情热情洋溢，露出灿烂的笑容' },
+  { code: 'enfp', name: 'ENFP 竞选者', group: 'NF', desc: '快乐小狗，背着背包，活泼开朗', visual: '亮绿色系低多边形小人，蓬松的橘色短发，穿黄绿色连帽衫，背着双肩背包，表情活泼开朗，眼睛亮晶晶的，张开双臂跳跃' },
+  { code: 'istj', name: 'ISTJ 物流师', group: 'SJ', desc: '蓝老头，戴着眼镜，拿着笔', visual: '深蓝色系低多边形小人，整齐的深蓝色短发，戴方框眼镜，穿深蓝色制服，手持笔和写字板，表情严肃认真，站姿笔挺' },
+  { code: 'isfj', name: 'ISFJ 守卫者', group: 'SJ', desc: '小护士，温柔体贴', visual: '浅蓝色系低多边形小人，温柔的棕色短发，穿浅蓝色护士风格连衣裙配白色围裙，表情温柔体贴，双手交叠在身前微笑' },
+  { code: 'estj', name: 'ESTJ 总经理', group: 'SJ', desc: '尺子姐，拿着尺子，严格认真', visual: '蓝色系低多边形小人，干练的棕色盘发，穿深蓝色西装套裙，手持一把长尺子，表情严格认真，一手叉腰一手指向前方' },
+  { code: 'esfj', name: 'ESFJ 执政官', group: 'SJ', desc: '伞哥，穿着围裙，拿着蛋糕', visual: '天蓝色系低多边形小人，棕色短发，穿天蓝色衬衫配围裙，手里端着一个奶油蛋糕，表情热情亲切，笑容温暖' },
+  { code: 'istp', name: 'ISTP 鉴赏家', group: 'SP', desc: '电钻哥，拿着电钻和扳手', visual: '土黄色系低多边形小人，短碎的黑发，穿卡其色工装背心，一手拿电钻一手拿扳手，表情酷酷的淡定，眼神锐利' },
+  { code: 'isfp', name: 'ISFP 探险家', group: 'SP', desc: '小画家，拿着调色板，安静文艺', visual: '暖黄色系低多边形小人，柔软的金色齐耳短发，穿橄榄绿色上衣配浅色围裙，一只手拿着圆形调色板另一只手拿画笔，表情安静温柔，浅浅微笑' },
+  { code: 'estp', name: 'ESTP 企业家', group: 'SP', desc: '墨镜哥，戴着墨镜，背着SPORT包', visual: '橙黄色系低多边形小人，精神的短发，戴黑色墨镜，穿橙色运动外套，背着运动单肩包，表情自信张扬，咧嘴笑，姿态放松随性' },
+  { code: 'esfp', name: 'ESFP 表演者', group: 'SP', desc: '沙锤姐，拿着沙锤，正在跳舞', visual: '玫红橙色系低多边形小人，波浪卷发，穿亮橙色连衣裙，双手各拿一个彩色沙锤，正在欢快地跳舞，笑容灿烂，裙摆飞扬' },
 ];
 
 // ============ 状态 ============
@@ -399,6 +451,19 @@ let bubbleSettings = {
   verticalPos: 56,   // 气泡区域起始位置（百分比）
   opacity: 0.95,     // 气泡不透明度
 };
+
+// 气泡自定义位置（拖拽后保存）
+let bubbleCustomPositions = {}; // { pageIndex: [{x, y, width, height}] }
+let isDraggingBubble = false;
+let draggingBubbleIndex = -1;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+let isResizingBubble = false;
+let resizeStartX = 0;
+let resizeStartY = 0;
+let resizeStartWidth = 0;
+let resizeStartHeight = 0;
+let currentBubbleRects = []; // 当前页面的气泡矩形，用于点击检测
 
 // ============ 初始化 MBTI 选择器 ============
 function initMbtiGrid(containerId, selected, onSelect) {
@@ -433,7 +498,7 @@ function renderDialogues() {
     item.innerHTML = `
       <button class="speaker-btn ${d.speaker === 'a' ? 'speaker-a' : 'speaker-b'}" onclick="toggleSpeaker(${i})" title="切换说话人">${d.speaker.toUpperCase()}</button>
       <textarea class="dialogue-text" rows="1" oninput="updateDialogue(${i}, this.value)" placeholder="输入对话内容...">${d.text}</textarea>
-      <button class="split-btn" onclick="splitAfterDialogue(${i})" title="在此处分页">↵</button>
+      <button class="split-btn" onclick="splitAfterDialogue(${i})" title="在此处分页：把这条对话之后的内容移到新的一页">分页</button>
       <button class="delete-btn" onclick="deleteDialogue(${i})">×</button>
     `;
     list.appendChild(item);
@@ -442,7 +507,7 @@ function renderDialogues() {
     if (i < allDialogues.length - 1 && dialoguePageMap[i] !== undefined && dialoguePageMap[i+1] !== undefined && dialoguePageMap[i] !== dialoguePageMap[i+1]) {
       const divider = document.createElement('div');
       divider.className = 'page-divider';
-      divider.innerHTML = `<span>—— 第 ${dialoguePageMap[i]+1} 页结束 ——</span>`;
+      divider.innerHTML = `<span>第 ${dialoguePageMap[i]+1} 页结束</span><button class="merge-btn" onclick="mergePages(${dialoguePageMap[i]}, ${dialoguePageMap[i+1]})" title="合并这两页">↩ 合并到上一页</button>`;
       list.appendChild(divider);
     }
   });
@@ -492,6 +557,31 @@ function splitAfterDialogue(i) {
   renderDialogues();
   renderPageManager();
   renderPageNav();
+}
+
+// 合并相邻的两页
+function mergePages(pageAIndex, pageBIndex) {
+  if (pageAIndex < 0 || pageBIndex < 0 || pageAIndex >= pages.length || pageBIndex >= pages.length) return;
+  if (pageBIndex !== pageAIndex + 1) return; // 只能合并相邻页
+  
+  const pageA = pages[pageAIndex];
+  const pageB = pages[pageBIndex];
+  
+  // 把 pageB 的对话合并到 pageA
+  pageA.dialogueIds = pageA.dialogueIds.concat(pageB.dialogueIds);
+  
+  // 删除 pageB
+  pages.splice(pageBIndex, 1);
+  
+  // 如果当前页被删了，切换到 pageA
+  if (currentPageIndex >= pageBIndex) {
+    currentPageIndex = Math.min(currentPageIndex, pages.length - 1);
+  }
+  
+  renderDialogues();
+  renderPageManager();
+  renderPageNav();
+  showPage(currentPageIndex);
 }
 function deleteDialogue(i) {
   if (allDialogues.length <= 1) return;
@@ -695,25 +785,40 @@ async function createReferenceImage() {
   canvas.height = REF_H;
   const ctx = canvas.getContext('2d');
   
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, REF_W, REF_H);
+  // 绘制统一的室内场景背景（墙壁+地板），避免AI理解成两个画框
+  const wallGrad = ctx.createLinearGradient(0, 0, 0, 700);
+  wallGrad.addColorStop(0, '#f5ede0');
+  wallGrad.addColorStop(1, '#e8dcc8');
+  ctx.fillStyle = wallGrad;
+  ctx.fillRect(0, 0, REF_W, 720);
+  // 地板
+  const floorGrad = ctx.createLinearGradient(0, 720, 0, REF_H);
+  floorGrad.addColorStop(0, '#d4b896');
+  floorGrad.addColorStop(1, '#c4a67f');
+  ctx.fillStyle = floorGrad;
+  ctx.fillRect(0, 720, REF_W, REF_H - 720);
+  // 墙脚线
+  ctx.fillStyle = '#b89968';
+  ctx.fillRect(0, 712, REF_W, 12);
   
   const [imgA, imgB] = await Promise.all([
     loadImage(`assets/${selectedA}.png`),
     loadImage(`assets/${selectedB}.png`),
   ]);
   
-  const size = 320;
-  const y = 80;
-  ctx.drawImage(imgA, 48, y, size, size);
-  
+  // 两个角色站在地板上，面朝彼此，中间有桌子空间，无白缝
+  const size = 340;
+  const y = 380;
+  // 左边人物（面朝右）
+  ctx.drawImage(imgA, 30, y, size, size);
+  // 右边人物（水平翻转，面朝左）
   ctx.save();
-  ctx.translate(REF_W - 48 - size, 0);
+  ctx.translate(REF_W - 30, 0);
   ctx.scale(-1, 1);
   ctx.drawImage(imgB, 0, y, size, size);
   ctx.restore();
   
-  return canvas.toDataURL('image/jpeg', 0.8);
+  return canvas.toDataURL('image/jpeg', 0.85);
 }
 
 // ============ 生成提示词 ============
@@ -726,8 +831,8 @@ function generatePromptForPage(page, pageIndex, totalPages, isFirstPage) {
   
   const pageDialogues = page.dialogueIds.map(id => allDialogues[id]).filter(d => d);
   const dialogueText = pageDialogues.map(d => {
-    const name = d.speaker === 'a' ? typeA.name.split(' ')[0] : typeB.name.split(' ')[0];
-    return `${name}: ${d.text}`;
+    const name = d.speaker === 'a' ? '左边人物' : '右边人物';
+    return `${name}说：${d.text}`;
   }).join('\n');
   
   const allText = pageDialogues.map(d => d.text).join('');
@@ -738,55 +843,64 @@ function generatePromptForPage(page, pageIndex, totalPages, isFirstPage) {
   else if (/喜欢|爱你|想你|抱抱|亲亲|宝贝|亲爱的/.test(allText)) mood = '甜蜜温馨';
   
   let stylePart = '';
-  if (globalOverall) stylePart += `整体风格：${globalOverall}。\n`;
-  if (scene) stylePart += `场景背景：${scene}。\n`;
-  if (page.style.extra) stylePart += `画面中添加：${page.style.extra}。\n`;
+  if (globalOverall) stylePart += `整体画风：${globalOverall}。\n`;
+  if (scene) stylePart += `场景：${scene}。\n`;
+  if (page.style.extra) stylePart += `道具细节：${page.style.extra}。\n`;
   
   let actionPart = '';
-  if (page.style.actionA) actionPart += `${typeA.name}的表情和动作：${page.style.actionA}。\n`;
-  if (page.style.actionB) actionPart += `${typeB.name}的表情和动作：${page.style.actionB}。\n`;
+  if (page.style.actionA) actionPart += `左边人物的表情动作：${page.style.actionA}。\n`;
+  if (page.style.actionB) actionPart += `右边人物的表情动作：${page.style.actionB}。\n`;
   
   if (isFirstPage) {
-    return `一张 MBTI 人格对话漫画，16personalities 经典低多边形小人风格，3:4 竖版构图。
+    return `低多边形（low poly）3D 风格插画，3:4 竖版构图。参考图中的两个低多边形小人分别是画面的左边人物和右边人物，请严格保持他们的发型、服装颜色和标志性道具。
 
-这是第 ${pageIndex + 1}/${totalPages} 页。
+【构图】
+画面左右各有一个独立的低多边形小人，两人之间保持明显距离，中间是场景和道具（如桌子）。两个人都是完整的全身或半身形象，各自有独立的身体轮廓，互不重叠、互不融合。左边人物面朝右，右边人物面朝左，两人对视交流。
 
-左侧是 ${typeA.name}（${typeA.desc}），右侧是 ${typeB.name}（${typeB.desc}），两人面对面站立。
+【左边人物外观】（严格参考图中左侧小人）
+${typeA.visual}
 
-整体情绪：${mood}。
+【右边人物外观】（严格参考图中右侧小人）
+${typeB.visual}
 
-本页对话内容（仅用于理解角色情绪，不要在图中画对话气泡和文字）：
-${dialogueText}
+【场景】
+${scene || '一个舒适的室内场景'}，背景从画面顶部一直延伸到底部，完整包围两个人物。
+${page.style.extra ? '道具：' + page.style.extra + '。' : ''}
+${globalOverall ? '画风要求：' + globalOverall + '。' : ''}
 
-${stylePart}${actionPart}
-具体要求：
-1. 保持两个角色的基本颜色、发型和低多边形风格
-2. 正常的人体结构，每个角色只有两只手，不要多余的肢体或手指
-3. 根据对话内容和情绪，调整角色的表情、手势和身体姿态
-4. 背景场景延伸整张图，上下左右都有背景，不要留空白区域
-5. 角色位于画面上半部分，下半部分也有背景场景
-6. 重要：画面中绝对不要出现任何对话气泡、文字或字幕
-7. 画面完整，角色清晰可见`;
-  } else {
-    return `基于参考图修改这张 MBTI 人格对话漫画。
-
-这是第 ${pageIndex + 1}/${totalPages} 页。
-
-左侧是 ${typeA.name}，右侧是 ${typeB.name}。
-
-整体情绪：${mood}。
-
-本页对话内容（仅用于理解角色情绪，不要在图中画对话气泡和文字）：
-${dialogueText}
-
+【人物状态】
+整体氛围：${mood}。
 ${actionPart}
-重要要求：
-1. 严格保持参考图中的背景、场景、光照、颜色和整体氛围完全不变
-2. 只修改两个角色的表情、手势和身体姿态，使其符合本页对话内容和情绪
-3. 正常的人体结构，每个角色只有两只手，不要多余的肢体或手指
-4. 角色的位置、大小、基本颜色和发型保持不变
-5. 绝对不要添加任何对话气泡、文字或字幕
-6. 除了角色的表情动作外，其他所有元素都必须与参考图完全一致`;
+
+【对话参考】（只用于体会情绪，不要把文字画进图里）
+${dialogueText}
+
+【画面内容清单】
+- 画面里只有：两个低多边形小人 + 场景背景 + 场景道具
+- 人物头顶上方是场景背景（如灯笼、天花板、天空、墙壁）
+- 人物身体周围是场景环境，画面干净
+- 画面中没有任何文字、字母、数字、符号
+- 画面中没有白色椭圆、白色云朵形状、对话框、气泡框、标签牌
+- 每个人物只有一个头、一个身体、两只手臂、两只手，手指数量正常
+- 两个人物轮廓清晰分开，不要画成连体人`;
+  } else {
+    return `低多边形（low poly）3D 风格插画，基于参考图修改。请严格保持参考图的场景、构图、人物位置、服装颜色、发型、道具、光照和画风完全一致，只改变两个人物的表情和动作。画面中不出现任何文字或标签。
+
+【本页氛围】${mood}
+
+【需要调整的动作】
+${actionPart || '保持自然交流的表情动作'}
+
+【对话参考】（只用于体会情绪，不要把文字画进图里）
+${dialogueText}
+
+【画面内容清单】
+- 画面里只有：两个低多边形小人 + 与参考图相同的场景背景和道具
+- 人物头顶上方保持为参考图中的场景背景
+- 画面中没有任何文字、字母、数字、符号
+- 画面中没有白色椭圆、白色云朵形状、对话框、气泡框、标签牌
+- 两个人物轮廓清晰分开，互不融合
+- 除人物表情动作外，所有元素与参考图完全一致`;
   }
 }
 
@@ -947,7 +1061,10 @@ async function renderCanvas(pageIndex) {
   
   // 获取本页对话
   const pageDialogues = page.dialogueIds.map(id => allDialogues[id]).filter(d => d && d.text.trim());
-  if (pageDialogues.length === 0) return;
+  if (pageDialogues.length === 0) {
+    currentBubbleRects = [];
+    return;
+  }
   
   // 使用用户调整的气泡参数
   const n = pageDialogues.length;
@@ -979,9 +1096,40 @@ async function renderCanvas(pageIndex) {
   let currentY = bubbleAreaTop + (bubbleAreaHeight - totalHeight) / 2;
   if (currentY < bubbleAreaTop) currentY = bubbleAreaTop;
   
-  // 绘制每个气泡
-  bubbles.forEach(bubble => {
-    drawBubbleFlexible(ctx, bubble, currentY, maxBubbleWidth);
+  // 检查是否有自定义位置
+  const customPositions = bubbleCustomPositions[pageIndex] || [];
+  
+  // 绘制每个气泡，并记录矩形
+  currentBubbleRects = [];
+  bubbles.forEach((bubble, i) => {
+    let x, y, width, height;
+    
+    // 如果有自定义位置，使用自定义位置
+    if (customPositions[i]) {
+      x = customPositions[i].x;
+      y = customPositions[i].y;
+      width = customPositions[i].width;
+      height = customPositions[i].height;
+    } else {
+      // 默认位置
+      const isA = bubble.isA;
+      const lines = bubble.lines;
+      let textWidth = 0;
+      lines.forEach(line => { const w = ctx.measureText(line).width; if (w > textWidth) textWidth = w; });
+      width = Math.min(textWidth + bubble.bubblePaddingX * 2, maxBubbleWidth);
+      height = bubble.bubbleHeight;
+      
+      if (isA) x = 80;
+      else x = CANVAS_W - 80 - width;
+      y = currentY;
+    }
+    
+    // 绘制气泡
+    drawBubbleAtPosition(ctx, bubble, x, y, width, height);
+    
+    // 记录矩形用于点击检测
+    currentBubbleRects.push({ x, y, width, height, index: i });
+    
     currentY += bubble.bubbleHeight + gap;
   });
 }
@@ -1078,6 +1226,197 @@ function drawBubbleFlexible(ctx, bubble, y, maxWidth) {
   });
 }
 
+// 在指定位置绘制气泡
+function drawBubbleAtPosition(ctx, bubble, x, y, width, height) {
+  const { isA, lines, fontSize, lineHeight, bubblePaddingX, bubblePaddingY, opacity } = bubble;
+  const radius = 24;
+  const triangleSize = 24;
+  
+  const bubbleTop = y + triangleSize;
+  const bubbleBottom = y + height;
+  
+  // 半透明白色背景
+  ctx.save();
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+  ctx.shadowBlur = 20;
+  ctx.shadowOffsetY = 6;
+  
+  ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+  ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(opacity + 0.05, 1)})`;
+  ctx.lineWidth = 2;
+  
+  ctx.beginPath();
+  ctx.moveTo(x + radius, bubbleTop);
+  ctx.lineTo(x + width - radius, bubbleTop);
+  ctx.quadraticCurveTo(x + width, bubbleTop, x + width, bubbleTop + radius);
+  ctx.lineTo(x + width, bubbleBottom - radius);
+  ctx.quadraticCurveTo(x + width, bubbleBottom, x + width - radius, bubbleBottom);
+  ctx.lineTo(x + radius, bubbleBottom);
+  ctx.quadraticCurveTo(x, bubbleBottom, x, bubbleBottom - radius);
+  ctx.lineTo(x, bubbleTop + radius);
+  ctx.quadraticCurveTo(x, bubbleTop, x + radius, bubbleTop);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+  
+  // 三角
+  ctx.save();
+  ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+  const triangleY = bubbleTop + 20;
+  ctx.beginPath();
+  if (isA) {
+    ctx.moveTo(x, triangleY);
+    ctx.lineTo(x - triangleSize, triangleY + triangleSize / 2);
+    ctx.lineTo(x, triangleY + triangleSize);
+  } else {
+    ctx.moveTo(x + width, triangleY);
+    ctx.lineTo(x + width + triangleSize, triangleY + triangleSize / 2);
+    ctx.lineTo(x + width, triangleY + triangleSize);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  
+  // 文字
+  ctx.fillStyle = '#222';
+  ctx.font = `${fontSize}px -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif`;
+  ctx.textBaseline = 'top';
+  const textX = x + bubblePaddingX;
+  let textY = bubbleTop + bubblePaddingY;
+  lines.forEach(line => {
+    ctx.fillText(line, textX, textY);
+    textY += lineHeight;
+  });
+}
+
+// ============ 气泡拖拽和缩放 ============
+function initBubbleDrag() {
+  const canvas = document.getElementById('previewCanvas');
+  if (!canvas) return;
+  
+  // 鼠标按下
+  canvas.addEventListener('mousedown', (e) => {
+    if (currentBubbleRects.length === 0) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = CANVAS_W / rect.width;
+    const scaleY = CANVAS_H / rect.height;
+    const mouseX = (e.clientX - rect.left) * scaleX;
+    const mouseY = (e.clientY - rect.top) * scaleY;
+    
+    // 检查是否点击在缩放手柄上（右下角）
+    const resizeHandleSize = 40;
+    for (let i = currentBubbleRects.length - 1; i >= 0; i--) {
+      const b = currentBubbleRects[i];
+      const handleX = b.x + b.width - resizeHandleSize;
+      const handleY = b.y + b.height - resizeHandleSize;
+      if (mouseX >= handleX && mouseX <= b.x + b.width && mouseY >= handleY && mouseY <= b.y + b.height) {
+        isResizingBubble = true;
+        draggingBubbleIndex = i;
+        resizeStartX = mouseX;
+        resizeStartY = mouseY;
+        resizeStartWidth = b.width;
+        resizeStartHeight = b.height;
+        canvas.style.cursor = 'nwse-resize';
+        e.preventDefault();
+        return;
+      }
+    }
+    
+    // 检查是否点击在气泡上
+    for (let i = currentBubbleRects.length - 1; i >= 0; i--) {
+      const b = currentBubbleRects[i];
+      if (mouseX >= b.x && mouseX <= b.x + b.width && mouseY >= b.y && mouseY <= b.y + b.height) {
+        isDraggingBubble = true;
+        draggingBubbleIndex = i;
+        dragOffsetX = mouseX - b.x;
+        dragOffsetY = mouseY - b.y;
+        canvas.style.cursor = 'move';
+        e.preventDefault();
+        return;
+      }
+    }
+  });
+  
+  // 鼠标移动
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = CANVAS_W / rect.width;
+    const scaleY = CANVAS_H / rect.height;
+    const mouseX = (e.clientX - rect.left) * scaleX;
+    const mouseY = (e.clientY - rect.top) * scaleY;
+    
+    if (isDraggingBubble && draggingBubbleIndex >= 0) {
+      // 拖拽移动
+      const b = currentBubbleRects[draggingBubbleIndex];
+      const newX = mouseX - dragOffsetX;
+      const newY = mouseY - dragOffsetY;
+      
+      // 更新位置
+      if (!bubbleCustomPositions[currentPageIndex]) bubbleCustomPositions[currentPageIndex] = [];
+      bubbleCustomPositions[currentPageIndex][draggingBubbleIndex] = {
+        x: newX,
+        y: newY,
+        width: b.width,
+        height: b.height
+      };
+      
+      renderCanvas(currentPageIndex);
+    } else if (isResizingBubble && draggingBubbleIndex >= 0) {
+      // 缩放
+      const deltaX = mouseX - resizeStartX;
+      const deltaY = mouseY - resizeStartY;
+      const newWidth = Math.max(200, resizeStartWidth + deltaX);
+      const newHeight = Math.max(100, resizeStartHeight + deltaY);
+      
+      if (!bubbleCustomPositions[currentPageIndex]) bubbleCustomPositions[currentPageIndex] = [];
+      bubbleCustomPositions[currentPageIndex][draggingBubbleIndex] = {
+        x: currentBubbleRects[draggingBubbleIndex].x,
+        y: currentBubbleRects[draggingBubbleIndex].y,
+        width: newWidth,
+        height: newHeight
+      };
+      
+      renderCanvas(currentPageIndex);
+    } else {
+      // 悬停时改变光标
+      let onBubble = false;
+      let onResizeHandle = false;
+      const resizeHandleSize = 40;
+      for (let i = currentBubbleRects.length - 1; i >= 0; i--) {
+        const b = currentBubbleRects[i];
+        const handleX = b.x + b.width - resizeHandleSize;
+        const handleY = b.y + b.height - resizeHandleSize;
+        if (mouseX >= handleX && mouseX <= b.x + b.width && mouseY >= handleY && mouseY <= b.y + b.height) {
+          onResizeHandle = true;
+          break;
+        }
+        if (mouseX >= b.x && mouseX <= b.x + b.width && mouseY >= b.y && mouseY <= b.y + b.height) {
+          onBubble = true;
+          break;
+        }
+      }
+      canvas.style.cursor = onResizeHandle ? 'nwse-resize' : (onBubble ? 'move' : 'default');
+    }
+  });
+  
+  // 鼠标释放
+  canvas.addEventListener('mouseup', () => {
+    isDraggingBubble = false;
+    isResizingBubble = false;
+    draggingBubbleIndex = -1;
+    canvas.style.cursor = 'default';
+  });
+  
+  canvas.addEventListener('mouseleave', () => {
+    isDraggingBubble = false;
+    isResizingBubble = false;
+    draggingBubbleIndex = -1;
+    canvas.style.cursor = 'default';
+  });
+}
+
 // ============ 修改当前页 ============
 async function modifyCurrentPage() {
   const modifyInstruction = document.getElementById('modifyInput').value.trim();
@@ -1091,16 +1430,17 @@ async function modifyCurrentPage() {
   try {
     const typeA = MBTI_TYPES.find(t => t.code === selectedA);
     const typeB = MBTI_TYPES.find(t => t.code === selectedB);
-    const prompt = `基于这张 MBTI 人格对话漫画进行修改。
+    const prompt = `基于这张低多边形风格的双人对话插画进行修改。
 
 修改要求：${modifyInstruction}
 
 保持要求：
-1. 保持 ${typeA.name} 和 ${typeB.name} 两个角色的基本形象、颜色和低多边形风格不变
-2. 正常的人体结构，每个角色只有两只手
+1. 保持左边和右边两个低多边形小人的基本形象、服装颜色、发型和道具不变
+2. 正常的人体结构，每个角色只有一个头、两只手臂、两只手
 3. 保持背景、场景、光照和整体氛围不变
-4. 绝对不要添加任何对话气泡、文字或字幕
-5. 只修改用户指定的部分，不要改变其他元素`;
+4. 画面中不出现任何文字、字母、数字、标签、对话气泡或白色云朵形状
+5. 两个人物轮廓清晰分开，互不融合
+6. 只修改用户指定的部分，不要改变其他元素`;
     
     page.generating = true;
     renderPageManager();
@@ -1203,49 +1543,123 @@ function downloadCurrentPage() {
 // ============ AI 辅助切页和设定 ============
 async function aiAssist() {
   if (allDialogues.length === 0) { alert('请先输入对话内容'); return; }
-  
+  if (!getApiKey()) { alert('请先配置 API Key'); showApiKeyBanner(); return; }
+
   const btn = document.getElementById('aiAssistBtn');
   btn.disabled = true;
-  btn.textContent = '🤖 AI 正在分析对话...';
-  
+  btn.textContent = '🤖 AI 正在通读对话、设计分镜...';
+
   try {
-    // 简单规则引擎：按情绪和话题自动切页
+    const typeA = MBTI_TYPES.find(t => t.code === selectedA);
+    const typeB = MBTI_TYPES.find(t => t.code === selectedB);
+    const globalScene = document.getElementById('globalScene').value.trim();
+    const globalOverall = document.getElementById('globalOverall').value.trim();
+
+    // 给对话编号
+    const numberedDialogue = allDialogues.map((d, i) =>
+      `[${i}] ${d.speaker === 'a' ? '左' : '右'}：${d.text}`
+    ).join('\n');
+
+    const systemPrompt = `你是一位资深的漫画/插画分镜导演，擅长把对话剧本拆分成一页页生动的画面。
+你的任务：认真通读全部对话，理解情节发展、情绪起伏和两个人物的性格，然后智能分页，并为每一页撰写非常具体、可视化、能让AI绘画模型一眼看懂的画面描述。
+
+【两个角色的固定外观（不可更改）】
+左边人物：${typeA.visual}
+右边人物：${typeB.visual}
+
+【分页原则】
+1. 每页放 2-4 句对话（一来一回算两句），不要让单页过于拥挤。
+2. 按情节段落、话题转换、情绪转折、场景切换来分页，而不是机械地每N句切一刀。
+3. 如果全篇发生在同一个地点，每一页的场景描述要保持一致（同样的地点、装修、光线），保证多页画面连贯；只有剧情明确转场时才更换场景。
+4. 开头相遇/打招呼、中间发展、高潮情绪、结尾，可以自然分成不同页。
+
+【场景识别（非常重要）】
+- 场景地点必须从对话台词的内容里推断出来：提到火锅/吃饭/聚餐就是中式火锅店或餐厅，提到咖啡/奶茶就是咖啡馆，提到上班/开会/PPT就是办公室，提到回家/沙发/周末就是家里客厅，提到散步/天气好就是公园，提到上课/考试就是教室，提到喝酒/聚会就是酒吧。
+- 不要默认使用"温馨空间"这种泛泛的场景，一定要落到对话里真实发生的具体地点。如果对话完全没有地点线索，才根据情境合理设定一个。
+- 同一故事发生在同一地点时，每一页的 scene 要用一致的描述（同样的装修、光线、陈设），保证多页画面连贯。
+
+【每一页的画面描述要求（这是重点，务必具体、精细、可视化）】
+- scene：场景环境，写清具体地点、装修风格、光线氛围、背景陈设、时间感，30-60字，要能直接指导绘画。
+- extra：画面里的道具细节，如桌上的物品、人物手中/周围的东西，必须和这一页的台词强相关（例如吃火锅就要有铜锅和涮菜，送礼物就要有礼物盒，喝咖啡就要有咖啡杯），不要留空。
+- actionA：左边人物在这一页的表情、眼神、手势、身体姿态。必须紧扣他/她这一页说的话和情绪（如开心、害羞、惊讶、思考、委屈、得意、无奈等），写成一个具体的动作镜头，不要笼统写"很开心"。
+- actionB：右边人物同理。
+- 动作要符合角色性格和当下台词，两个人物要有互动感（对视、递东西、转身、捂脸、手指对方等）。
+- 描述里不要出现任何角色名字、字母代号、对话气泡或文字。
+
+【输出格式】只输出一个 JSON 对象，不要输出任何解释或 markdown 代码块：
+{
+  "pages": [
+    {
+      "lines": [0, 1],
+      "scene": "……",
+      "extra": "……",
+      "actionA": "……",
+      "actionB": "……"
+    }
+  ]
+}
+lines 是这一页包含的对话编号数组（从0开始）。所有编号必须恰好出现一次、按顺序、不遗漏不重复，完整覆盖全部对话。`;
+
+    const userPrompt = `${globalScene ? '用户指定的故事场景：' + globalScene + '（请以此为基础，保持全篇一致）\n' : ''}${globalOverall ? '用户指定的画风/额外要求：' + globalOverall + '\n' : ''}下面是完整对话（共${allDialogues.length}句），请通读后分页并设计每一页画面：\n\n${numberedDialogue}`;
+
+    const raw = await callDoubaoChat(systemPrompt, userPrompt);
+
+    // 清理可能的 markdown 包裹
+    let jsonStr = raw.trim();
+    const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenceMatch) jsonStr = fenceMatch[1].trim();
+    const objStart = jsonStr.indexOf('{');
+    const objEnd = jsonStr.lastIndexOf('}');
+    if (objStart !== -1 && objEnd !== -1) jsonStr = jsonStr.substring(objStart, objEnd + 1);
+
+    const plan = JSON.parse(jsonStr);
+    if (!plan.pages || !Array.isArray(plan.pages) || plan.pages.length === 0) {
+      throw new Error('AI 返回的分页结果格式不正确');
+    }
+
+    // 校验并构建页面
+    const covered = [];
     const newPages = [];
-    let currentPageDialogues = [];
-    let lastMood = '';
-    
-    for (let i = 0; i < allDialogues.length; i++) {
-      const d = allDialogues[i];
-      const text = d.text;
-      
-      // 判断情绪
-      let mood = 'neutral';
-      if (/哈哈|开心|好呀|太棒|喜欢|哇|嘻嘻|好棒|太好了|走啦|吃|玩|耶|棒|爽|快乐|高兴|兴奋/.test(text)) mood = 'happy';
-      else if (/为什么|怎么|？|思考|想想|考虑|计划|安排|分析/.test(text)) mood = 'thinking';
-      else if (/生气|烦|讨厌|滚|闭嘴|无语|无奈|唉|哎|算了|随便/.test(text)) mood = 'angry';
-      
-      // 情绪变化或已有3条时切页
-      if (currentPageDialogues.length >= 3 || (lastMood && mood !== lastMood && currentPageDialogues.length >= 2)) {
-        newPages.push(createPageWithSettings(currentPageDialogues, lastMood));
-        currentPageDialogues = [];
-      }
-      currentPageDialogues.push(i);
-      lastMood = mood;
+    for (const p of plan.pages) {
+      const ids = (p.lines || []).map(n => Number(n)).filter(n =>
+        Number.isInteger(n) && n >= 0 && n < allDialogues.length
+      ).sort((a, b) => a - b);
+      if (ids.length === 0) continue;
+      covered.push(...ids);
+      newPages.push({
+        id: Date.now() + Math.random() + Math.random(),
+        dialogueIds: ids,
+        style: {
+          scene: p.scene || globalScene || '',
+          extra: p.extra || '',
+          actionA: p.actionA || '',
+          actionB: p.actionB || ''
+        },
+        characterImageUrl: null,
+        generated: false,
+        generating: false,
+        progress: 0,
+        progressText: ''
+      });
     }
-    if (currentPageDialogues.length > 0) {
-      newPages.push(createPageWithSettings(currentPageDialogues, lastMood));
+
+    // 校验覆盖完整性
+    const expected = allDialogues.map((_, i) => i);
+    const allCovered = expected.every(n => covered.includes(n)) && covered.length === allDialogues.length;
+    if (!allCovered || newPages.length === 0) {
+      throw new Error('AI 分页没有完整覆盖所有对话，请重试');
     }
-    
+
     pages = newPages;
     currentPageIndex = 0;
     renderPageManager();
     renderPageNav();
     showPage(0);
-    
-    alert(`AI 辅助完成！\n\n已自动分为 ${pages.length} 页，并为每页设定了画面风格。\n你可以点击每页展开查看和修改，然后点击生成。`);
-    
+
+    alert(`AI 分镜完成！\n\n已通读 ${allDialogues.length} 句对话，分为 ${pages.length} 页。\n每页的场景、道具和两个人的表情动作都已根据台词内容填好。\n你可以展开每页查看和微调，然后点击生成。`);
+
   } catch (error) {
-    alert(`AI 辅助失败：${error.message}`);
+    alert('AI 分镜失败：\n' + error.message + '\n\n你仍然可以用对话列表里的"分页"按钮手动分页。');
   } finally {
     btn.disabled = false;
     btn.textContent = '🤖 AI 辅助切页和设定画面';
@@ -1258,24 +1672,53 @@ function createPageWithSettings(dialogueIds, mood) {
   let actionB = '';
   let extra = '';
   
-  // 根据所有对话内容判断场景
+  // 根据所有对话内容判断场景（更精细的描述）
   const allText = dialogueIds.map(id => allDialogues[id].text).join('');
-  if (/火锅|吃|饭|餐厅|美食/.test(allText)) { scene = '火锅店或餐厅'; extra = '桌上有火锅和美食'; }
-  else if (/咖啡|咖啡馆|下午茶/.test(allText)) { scene = '咖啡馆'; extra = '桌上有咖啡杯'; }
-  else if (/公司|上班|工作|办公室|会议/.test(allText)) { scene = '办公室'; }
-  else if (/家|家里|客厅|沙发|电视/.test(allText)) { scene = '家里客厅'; extra = '有沙发和茶几'; }
-  else if (/公园|户外|散步|天气|花/.test(allText)) { scene = '户外公园'; }
+  if (/火锅|吃|饭|餐厅|美食|麻辣/.test(allText)) {
+    scene = '热闹的中式火锅店，红色灯笼挂在天花板上，暖黄色灯光，周围是木质桌椅';
+    extra = '桌上摆着冒着热气的铜火锅，周围有各种涮菜和蘸料碗';
+  }
+  else if (/咖啡|咖啡馆|下午茶|奶茶/.test(allText)) {
+    scene = '温馨的咖啡馆，靠窗的位置，自然光透过玻璃照进来，背景是书架和绿植';
+    extra = '桌上放着两杯咖啡，旁边有小蛋糕';
+  }
+  else if (/公司|上班|工作|办公室|会议|PPT/.test(allText)) {
+    scene = '现代办公室，明亮的灯光，背景是办公桌、电脑和文件柜，窗外是城市景观';
+    extra = '桌上有笔记本电脑和文件';
+  }
+  else if (/家|家里|客厅|沙发|电视|周末/.test(allText)) {
+    scene = '温馨的客厅，米色沙发，柔软的靠垫，暖黄色落地灯，背景有书架和绿植';
+    extra = '茶几上有零食和遥控器';
+  }
+  else if (/公园|户外|散步|天气|花|阳光|草坪/.test(allText)) {
+    scene = '晴朗的户外公园，绿色的草坪，远处有大树和湖水，阳光明媚';
+    extra = '旁边有长椅和盛开的花朵';
+  }
+  else if (/学校|教室|上课|同学|考试/.test(allText)) {
+    scene = '明亮的教室，黑板，课桌椅，窗外是校园景色';
+    extra = '桌上有课本和笔记本';
+  }
+  else if (/酒吧|喝酒|聚会|派对/.test(allText)) {
+    scene = '灯光昏暗的酒吧，背景有酒柜和霓虹灯，氛围轻松';
+    extra = '桌上有酒杯和饮料';
+  }
   
-  // 根据情绪设定表情动作
+  // 根据情绪设定表情动作（更精细的描述）
   if (mood === 'happy') {
-    actionA = '微笑或开心';
-    actionB = '兴奋或手舞足蹈';
+    actionA = '嘴角上扬微笑，眼神柔和，身体放松，双手自然放在桌上';
+    actionB = '眼睛亮晶晶的，张嘴大笑，一只手兴奋地举起来，身体前倾';
   } else if (mood === 'thinking') {
-    actionA = '托腮思考或扶眼镜';
-    actionB = '认真倾听或歪头思考';
+    actionA = '一只手托着下巴，眉头微微皱起，眼神看向斜上方思考';
+    actionB = '歪着头，手托着脸颊，眼神认真地看着对方';
   } else if (mood === 'angry') {
-    actionA = '无奈扶额或皱眉';
-    actionB = '委屈或生气';
+    actionA = '一只手扶着额头，眼睛闭着，表情无奈，身体向后靠';
+    actionB = '撅着嘴，眼睛水汪汪的，双手抱胸，身体微微后退';
+  } else if (mood === 'sweet') {
+    actionA = '温柔地笑着，眼神宠溺，身体微微前倾';
+    actionB = '脸红了，害羞地笑着，手捂着嘴，眼睛弯成月牙';
+  } else {
+    actionA = '表情平静，自然地看着对方，双手放在桌上';
+    actionB = '表情自然，认真地听着，身体微微前倾';
   }
   
   return {
@@ -1414,6 +1857,7 @@ renderPageManager();
 renderPageNav();
 showApiKeyBanner();
 renderHistoryList();
+initBubbleDrag();
 </script>
 </body>
 </html>
