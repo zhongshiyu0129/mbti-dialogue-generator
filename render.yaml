@@ -1,0 +1,18 @@
+# Render 部署配置（Infrastructure as Code）
+# 文档: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: mbti-dialogue-generator
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # Key 不写进代码（sync: false），需在 Render 后台 Environment 手动填写
+      - key: ARK_API_KEY
+        sync: false
+      - key: NODE_VERSION
+        value: 22.14.0

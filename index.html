@@ -211,7 +211,7 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
     </details>
   </div>
   
-  <h1>MBTI 对话图生成器 v4</h1>
+  <h1>MBTI 对话图生成器</h1>
   <p class="subtitle">手动分页 · 每页独立设定 · 真实生成进度 · AI辅助切页 · 背景全图延伸</p>
   
   <div class="main">
@@ -339,8 +339,8 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
 const API_KEY_STORAGE_KEY = 'mbti_dialogue_api_key';
 const HISTORY_STORAGE_KEY = 'mbti_dialogue_history_v4';
 const SEEDREAM_MODEL_ID = 'doubao-seedream-5-0-flash-260915';
-const SEEDREAM_API_URL = 'https://ark.cn-beijing.volces.com/api/v3/images/generations';
-const CHAT_API_URL = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
+const SEEDREAM_API_URL = '/api/images/generations';
+const CHAT_API_URL = '/api/chat/completions';
 const CHAT_MODEL_STORAGE_KEY = 'mbti_dialogue_chat_model';
 const DEFAULT_CHAT_MODEL = 'doubao-seed-2-0-mini-260428';
 const CANVAS_W = 1860;
@@ -355,7 +355,7 @@ function getChatModel() {
 async function callDoubaoChat(systemPrompt, userPrompt) {
   const response = await fetch(CHAT_API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getApiKey()}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: getChatModel(),
       messages: [
@@ -380,10 +380,8 @@ async function callDoubaoChat(systemPrompt, userPrompt) {
 
 // ============ API Key 管理 ============
 function getApiKey() {
-  const saved = localStorage.getItem(API_KEY_STORAGE_KEY);
-  if (saved && saved.trim()) return saved.trim();
-  if (window.CONFIG && window.CONFIG.API_KEY && window.CONFIG.API_KEY.trim()) return window.CONFIG.API_KEY.trim();
-  return '';
+  // 公开网站由服务端代理持有 Key，前端无需也无法获取；返回占位让流程检查通过
+  return 'server-proxy';
 }
 function saveApiKey(key) {
   if (key && key.trim()) localStorage.setItem(API_KEY_STORAGE_KEY, key.trim());
@@ -391,8 +389,7 @@ function saveApiKey(key) {
 }
 function showApiKeyBanner() {
   const banner = document.getElementById('apiKeyBanner');
-  if (!getApiKey()) banner.style.display = 'block';
-  else banner.style.display = 'none';
+  if (banner) banner.style.display = 'none';
 }
 function saveApiKeyFromInput() {
   const input = document.getElementById('apiKeyInput');
@@ -912,7 +909,7 @@ async function callSeedreamImageEdit(referenceImage, prompt, onProgress) {
     if (onProgress) onProgress(20, '正在调用 AI 生成...');
     const response = await fetch(SEEDREAM_API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getApiKey()}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: SEEDREAM_MODEL_ID, prompt: prompt, image: referenceImage, size: `${CANVAS_W}x${CANVAS_H}`, response_format: 'b64_json', watermark: false }),
       signal: currentAbortController.signal,
     });

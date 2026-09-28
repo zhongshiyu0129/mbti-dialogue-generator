@@ -19,3 +19,6 @@ index_v1_single.html
 index_v*.html
 index_old_backup.html
 index_v1_single.html
+
+# Node 依赖
+node_modules
