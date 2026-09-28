@@ -189,6 +189,7 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
 }
 </style>
 <script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
 <body>
 <div class="container">
@@ -290,7 +291,7 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
           <div class="spinner"></div>
           <div class="text" id="loadingText">AI 正在生成中...</div>
         </div>
-        <canvas id="previewCanvas" width="1920" height="2560"></canvas>
+        <canvas id="previewCanvas" width="1860" height="2480"></canvas>
       </div>
       
       <!-- 气泡调整面板 -->
@@ -326,7 +327,8 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
       
       <!-- 下载按钮 -->
       <div class="download-row">
-        <button class="download-btn" id="downloadCurrentBtn" onclick="downloadCurrentPage()">下载当前页</button>
+        <button class="download-btn" id="downloadCurrentBtn" onclick="downloadCurrentPage()">导出本页</button>
+        <button class="download-btn" id="downloadAllBtn" onclick="downloadAllPages()">一键导出全部</button>
       </div>
     </div>
   </div>
@@ -336,13 +338,13 @@ h1 { color: #fff; text-align: center; margin-bottom: 4px; font-size: 24px; }
 // ============ 配置 ============
 const API_KEY_STORAGE_KEY = 'mbti_dialogue_api_key';
 const HISTORY_STORAGE_KEY = 'mbti_dialogue_history_v4';
-const SEEDREAM_MODEL_ID = 'doubao-seedream-4-5-251128';
+const SEEDREAM_MODEL_ID = 'doubao-seedream-5-0-flash-260915';
 const SEEDREAM_API_URL = 'https://ark.cn-beijing.volces.com/api/v3/images/generations';
 const CHAT_API_URL = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
 const CHAT_MODEL_STORAGE_KEY = 'mbti_dialogue_chat_model';
 const DEFAULT_CHAT_MODEL = 'doubao-seed-2-0-mini-260428';
-const CANVAS_W = 1920;
-const CANVAS_H = 2560;
+const CANVAS_W = 1860;
+const CANVAS_H = 2480;
 
 function getChatModel() {
   const saved = localStorage.getItem(CHAT_MODEL_STORAGE_KEY);
@@ -728,6 +730,7 @@ function showPage(index) {
   const loading = document.getElementById('loading');
   const modifySection = document.getElementById('modifySection');
   const downloadBtn = document.getElementById('downloadCurrentBtn');
+  const downloadAllBtn = document.getElementById('downloadAllBtn');
   const bubblePanel = document.getElementById('bubbleAdjustPanel');
   
   const page = pages[index];
@@ -738,6 +741,7 @@ function showPage(index) {
     loading.style.display = 'none';
     modifySection.classList.add('show');
     downloadBtn.classList.add('show');
+    if (downloadAllBtn) downloadAllBtn.classList.add('show');
     if (bubblePanel) bubblePanel.style.display = 'block';
   } else if (page && page.generating) {
     canvas.style.display = 'none';
@@ -746,6 +750,7 @@ function showPage(index) {
     document.getElementById('loadingText').textContent = page.progressText || '正在生成...';
     modifySection.classList.remove('show');
     downloadBtn.classList.remove('show');
+    if (downloadAllBtn) downloadAllBtn.classList.remove('show');
     if (bubblePanel) bubblePanel.style.display = 'none';
   } else {
     canvas.style.display = 'none';
@@ -753,6 +758,7 @@ function showPage(index) {
     loading.style.display = 'none';
     modifySection.classList.remove('show');
     downloadBtn.classList.remove('show');
+    if (downloadAllBtn) downloadAllBtn.classList.remove('show');
     if (bubblePanel) bubblePanel.style.display = 'none';
   }
 }
@@ -763,6 +769,7 @@ async function loadImage(src) {
   if (src.startsWith('http://') || src.startsWith('https://')) {
     return new Promise((resolve, reject) => {
       const img = new Image();
+      img.crossOrigin = 'anonymous';
       img.onload = () => { characterImages[src] = img; resolve(img); };
       img.onerror = () => reject(new Error(`远程图片加载失败`));
       img.src = src;
@@ -872,9 +879,6 @@ ${globalOverall ? '画风要求：' + globalOverall + '。' : ''}
 整体氛围：${mood}。
 ${actionPart}
 
-【对话参考】（只用于体会情绪，不要把文字画进图里）
-${dialogueText}
-
 【画面内容清单】
 - 画面里只有：两个低多边形小人 + 场景背景 + 场景道具
 - 人物头顶上方是场景背景（如灯笼、天花板、天空、墙壁）
@@ -890,9 +894,6 @@ ${dialogueText}
 
 【需要调整的动作】
 ${actionPart || '保持自然交流的表情动作'}
-
-【对话参考】（只用于体会情绪，不要把文字画进图里）
-${dialogueText}
 
 【画面内容清单】
 - 画面里只有：两个低多边形小人 + 与参考图相同的场景背景和道具
@@ -912,7 +913,7 @@ async function callSeedreamImageEdit(referenceImage, prompt, onProgress) {
     const response = await fetch(SEEDREAM_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getApiKey()}` },
-      body: JSON.stringify({ model: SEEDREAM_MODEL_ID, prompt: prompt, image: referenceImage, size: `${CANVAS_W}x${CANVAS_H}`, response_format: 'url' }),
+      body: JSON.stringify({ model: SEEDREAM_MODEL_ID, prompt: prompt, image: referenceImage, size: `${CANVAS_W}x${CANVAS_H}`, response_format: 'b64_json', watermark: false }),
       signal: currentAbortController.signal,
     });
     if (!response.ok) {
@@ -921,7 +922,8 @@ async function callSeedreamImageEdit(referenceImage, prompt, onProgress) {
     }
     if (onProgress) onProgress(75, 'AI 生成完成，正在加载图片...');
     const data = await response.json();
-    const imageUrl = data.data && data.data[0] && data.data[0].url;
+    const item = data.data && data.data[0];
+    const imageUrl = item && (item.b64_json ? 'data:image/jpeg;base64,' + item.b64_json : item.url);
     if (!imageUrl) throw new Error('API 返回数据格式异常: ' + JSON.stringify(data).substring(0, 300));
     return imageUrl;
   } catch (error) {
@@ -1537,6 +1539,55 @@ function downloadCurrentPage() {
       alert('由于跨域限制，无法直接下载合成图。\n\n将打开原始图片，你可以右键保存。');
       window.open(page.characterImageUrl, '_blank');
     }
+  }
+}
+
+// ============ 一键导出全部（打包zip） ============
+async function downloadAllPages() {
+  const readyPages = pages.map((p, i) => ({ p, i })).filter(x => x.p && x.p.characterImageUrl);
+  if (readyPages.length === 0) { alert('还没有已生成的图片，请先生成至少一页。'); return; }
+  if (readyPages.length < pages.length) {
+    const ok = confirm(`共有 ${pages.length} 页，其中 ${readyPages.length} 页已生成图片。\n\n未生成的页会被跳过，是否只导出这 ${readyPages.length} 张？`);
+    if (!ok) return;
+  }
+
+  const btn = document.getElementById('downloadAllBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+
+  try {
+    const zip = new JSZip();
+    const folder = zip.folder('MBTI对话图');
+    const canvas = document.getElementById('previewCanvas');
+    const originalIndex = currentPageIndex;
+
+    for (let k = 0; k < readyPages.length; k++) {
+      const idx = readyPages[k].i;
+      btn.textContent = `导出中 ${k + 1}/${readyPages.length}...`;
+      await renderCanvas(idx);
+      await new Promise(r => setTimeout(r, 80));
+      const base64 = canvas.toDataURL('image/png').split(',')[1];
+      const num = String(idx + 1).padStart(2, '0');
+      folder.file(`第${num}页.png`, base64, { base64: true });
+    }
+
+    btn.textContent = '正在打包...';
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 10);
+    link.download = `MBTI对话图_${readyPages.length}张_${stamp}.zip`;
+    link.href = url;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+    currentPageIndex = originalIndex;
+    await renderCanvas(originalIndex);
+  } catch (e) {
+    alert('导出失败：' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
   }
 }
 
