@@ -99,6 +99,20 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true, keyConfigured: Boolean(ARK_API_KEY) });
 });
 
+// 临时诊断端点：只返回 Key 元信息，不泄露完整 Key（定位完即删）
+app.get('/api/debug', (req, res) => {
+  const k = process.env.ARK_API_KEY || '';
+  res.json({
+    length: k.length,
+    prefix: k.slice(0, 6),
+    suffix: k.slice(-4),
+    hasSurroundingQuote: /^["']|["']$/.test(k),
+    hasOuterWhitespace: k !== k.trim(),
+    startsWithBearer: /^bearer\s/i.test(k),
+    charCodesHead: Array.from(k.slice(0, 8)).map(ch => ch.charCodeAt(0)),
+  });
+});
+
 // ---------- 静态前端（dotfiles 一律拒绝） ----------
 app.use(
   express.static(__dirname, {
